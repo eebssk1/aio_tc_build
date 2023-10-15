@@ -1,0 +1,11 @@
+#!/bin/sh
+
+if [ "x$VERBOSE_LD" != "x" ]; then
+echo "$@"
+fi
+
+if [ "x$FORCE_GOLD" != "x" ]; then
+exec $0.gold $@
+fi
+
+exec $0.bfd $@

@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/eebssk1/bbk/debian-bookworm:0.1
+      volumes:
+        - /root:/user
+    strategy:
+      matrix:
+        target: [linux-native, mingw32-cross, mingw64-cross, mingw64-legacy-cross, arm64-cross, arm32-cross]
+
+    steps:
+      - name: checkout repo
+        uses: actions/checkout@v4
+      - name: checkout binutils
+        uses: actions/checkout@v4
+        with:
+          repository: "eebssk1/m_binutils"
+          path: "./m_binutils"
+      - name: checkout gcc
+        uses: actions/checkout@v4
+        with:
+          repository: "eebssk1/m_gcc"
+          path: "./m_gcc"
+      - name: enable ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          verbose: 1
+          max-size: "1872M"
+          key: t_${{ matrix.target }}
+      - name: swap
+        run: exec ./swap.sh
+      - name: build
+        run: exec stdbuf -oL ./exec.sh ${{ matrix.target }}
+      - name: collect config log
+        if: (!cancelled())
+        run: exec ./logtar.sh
+      - name: upload result
+        uses: actions/upload-artifact@v3
+        with:
+          name: result
+          path: |
+            ./*native.tgz
+            ./*cross.tgz
+      - name: upload debug output
+        if: (!cancelled())
+        uses: actions/upload-artifact@v3
+        with:
+          name: debug
+          path: |
+            ./conflogs*.tgz
+            ./curouts*.tgz

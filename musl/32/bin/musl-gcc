@@ -1,0 +1,2 @@
+#!/bin/sh
+exec "${REALGCC:-arm-none-linux-gnueabihf-gcc}" "$@" -specs "out/lib/musl-gcc.specs"

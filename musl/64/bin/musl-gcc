@@ -1,0 +1,2 @@
+#!/bin/sh
+exec "${REALGCC:-aarch64-none-linux-gnu-gcc}" "$@" -specs "out/lib/musl-gcc.specs"

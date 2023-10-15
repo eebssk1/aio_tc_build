@@ -1,0 +1,1 @@
+-fuse-ld=gold -Wl,-O3,--relax,--icf=safe,--gc-sections,--sort-common=descending,--sort-section=name
