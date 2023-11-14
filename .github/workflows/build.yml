@@ -6,12 +6,27 @@ on:
   workflow_dispatch:
 
 jobs:
+  gen_tag:
+    runs-on: ubuntu-latest
+    outputs:
+      TAG: ${{ steps.gen.outputs.TAG }}
+      TIME: ${{ steps.gen.outputs.TIME }}
+    steps:
+      - name: gen
+        id: gen
+        run: |
+          echo "TAG=$(dd if=/dev/urandom bs=32 count=1 2>/dev/null | hexdump -n 4 -e '4/1 "%02x " "\n"' | tr -d ' \n' )" >> "$GITHUB_OUTPUT"
+          echo "TIME=$(date +%Y%m%d%H%M%S)" >> "$GITHUB_OUTPUT"
   build:
     runs-on: ubuntu-latest
+    needs: gen_tag
     container:
       image: ghcr.io/eebssk1/bbk/debian-bookworm:0.1
       volumes:
         - /root:/user
+    env:
+      TAG: ${{ needs.gen_tag.outputs.TAG }}
+      TIME: ${{ needs.gen_tag.outputs.TIME }}
     strategy:
       matrix:
         target: [linux-native, mingw32-cross, mingw64-cross, mingw64-legacy-cross, arm64-cross, arm32-cross]
@@ -57,3 +72,13 @@ jobs:
           path: |
             ./conflogs*.tgz
             ./curouts*.tgz
+      - name: release
+        uses: ncipollo/release-action@v1.13.0
+        with:
+          allowUpdates: true
+          artifacts: "*native.tgz,*cross.tgz,conflogs*.tgz,onelog.txt"
+          commit: main
+          makeLatest: true
+          tag: ${{ env.TAG }}
+          name: ${{ env.TAG }}_${{ env.TIME }}
+          
