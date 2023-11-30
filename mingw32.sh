@@ -38,6 +38,8 @@ cd m_gcc; mkdir build; cd build
 export lt_cv_deplibs_check_method='pass_all'
 export CPPFLAGS_FOR_TARGET="-DWIN32_LEAN_AND_MEAN -DCOM_NO_WINDOWS_H -Wl,--large-address-aware -fdata-sections @$CUR/gccflagsm"
 export LDFLAGS_FOR_TARGET="@$CUR/ldflagsm"
+export CFLAGS_FOR_TARGET="-O3 -g1"
+export CXXFLAGS_FOR_TARGET="-O3 -g1"
 
 echo current utc time 3 is $(date -u)
 

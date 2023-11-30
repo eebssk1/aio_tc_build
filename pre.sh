@@ -14,4 +14,4 @@ if [ ! -e m_gcc ]; then
 git clone --single-branch https://github.com/eebssk1/m_gcc
 fi
 
-curl -L "https://github.com/eebssk1/mingw-crt-build/releases/download/016733a6/mingw-crt.tgz" | tar -zxf -
+curl -L "https://github.com/eebssk1/mingw-crt-build/releases/download/fe82ab31/mingw-crt.tgz" | tar -zxf -
