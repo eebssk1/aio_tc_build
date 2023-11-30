@@ -36,7 +36,7 @@ ln -s . out/i686-w64-mingw32/usr
 cd m_gcc; mkdir build; cd build
 
 export lt_cv_deplibs_check_method='pass_all'
-export CPPFLAGS_FOR_TARGET="-DWIN32_LEAN_AND_MEAN -DCOM_NO_WINDOWS_H -Wl,--large-address-aware -fdata-sections @$CUR/gccflagsm"
+export CPPFLAGS_FOR_TARGET="-DWIN32_LEAN_AND_MEAN -DCOM_NO_WINDOWS_H -Wl,--large-address-aware -fdata-sections -flto=auto -ffat-lto-objects @$CUR/gccflagsm"
 export LDFLAGS_FOR_TARGET="@$CUR/ldflagsm"
 
 echo current utc time 3 is $(date -u)
