@@ -16,12 +16,13 @@ fi
 echo Current path is $PWD
 echo Target is $1
 
-apt-get update -y
-apt-get upgrade -y
+if [ -e /usr/lib/x86_64-linux-gnu/libjemalloc.so.2 ]; then
+export LD_PRELOAD=libjemalloc.so.2
+fi
 
-apt-get install -y libtcmalloc-minimal4 bsdextrautils
-
+if [ -e /usr/lib/x86_64-linux-gnu/libtcmalloc_minimal.so.4 ]; then
 export LD_PRELOAD=libtcmalloc_minimal.so.4
+fi
 
 export GZIP_OPT=-7
 
