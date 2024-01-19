@@ -2,7 +2,10 @@
 
 CUR=$PWD
 
+if [ -e /opt/newcc/bin ]; then
 export PATH=/opt/newcc/bin:$PATH
+export LD_LIBRARY_PATH=/opt/newcc/lib
+fi
 
 case "$1" in
 32)

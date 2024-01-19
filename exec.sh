@@ -27,7 +27,7 @@ fi
 export GZIP_OPT=-7
 
 echo Running PRE script
-$CUR/pre.sh
+$CUR/pre.sh || exit 255
 
 chrt -b --pid 0 $$
 renice 3 $$

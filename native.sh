@@ -2,7 +2,10 @@
 
 CUR=$PWD
 
+if [ -e /opt/newcc/bin ]; then
 export PATH=/opt/newcc/bin:$PATH
+export LD_LIBRARY_PATH=/opt/newcc/lib
+fi
 
 if [ "x$(which ccache)" != "x" ]; then
 export CC="ccache gcc" CXX="ccache g++"

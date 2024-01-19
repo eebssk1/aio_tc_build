@@ -2,7 +2,10 @@
 
 CUR=$PWD
 
+if [ -e /opt/newcc/bin ]; then
 export PATH=/opt/newcc/bin:$PATH
+export LD_LIBRARY_PATH=/opt/newcc/lib
+fi
 
 if [ "x$(which ccache)" != "x" ]; then
 export CC="ccache gcc" CXX="ccache g++"
@@ -16,6 +19,8 @@ export LDFLAGS="-L/usr/local/lib @$CUR/ldflags"
 export AR="gcc-ar"
 export RANLIB="gcc-ranlib"
 export NM="gcc-nm"
+
+curl -L "https://github.com/eebssk1/mingw-crt-build/releases/download/fe82ab31/mingw-crt.tgz" | tar -zxf -
 
 echo current utc time 1 is $(date -u)
 
