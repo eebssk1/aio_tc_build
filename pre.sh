@@ -28,5 +28,4 @@ fi
 rm -rf m_*/build
 rm -rf out
 rm -rf *.tgz
-
-curl -L "https://github.com/eebssk1/mingw-crt-build/releases/download/fe82ab31/mingw-crt.tgz" | tar -zxf -
+rm -rf time-*
