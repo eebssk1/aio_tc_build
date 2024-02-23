@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: gen_tag
     container:
-      image: ghcr.io/eebssk1/bbk/debian-bookworm:0.1
+      image: ghcr.io/eebssk1/bbk/debian-bookworm:latest
       volumes:
         - /root:/user
     env:
