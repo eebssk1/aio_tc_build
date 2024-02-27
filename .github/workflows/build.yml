@@ -34,6 +34,8 @@ jobs:
     steps:
       - name: checkout repo
         uses: actions/checkout@v4
+      - name: swap
+        run: exec ./swap.sh
       - name: checkout binutils
         uses: actions/checkout@v4
         with:
@@ -50,8 +52,6 @@ jobs:
           verbose: 1
           max-size: "1872M"
           key: t_${{ matrix.target }}
-      - name: swap
-        run: exec ./swap.sh
       - name: build
         run: exec stdbuf -oL ./exec.sh ${{ matrix.target }}
       - name: collect config log
@@ -81,4 +81,4 @@ jobs:
           makeLatest: true
           tag: ${{ env.TAG }}
           name: ${{ env.TAG }}_${{ env.TIME }}
-          
+
