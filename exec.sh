@@ -46,6 +46,9 @@ $CUR/mingw64.sh
 mingw64-legacy-cross)
 $CUR/mingw64.sh legacy
 ;;
+mingw64-legacy-super-cross)
+$CUR/mingw64.sh legacy_super
+;;
 mingw32-cross)
 $CUR/mingw32.sh
 ;;
