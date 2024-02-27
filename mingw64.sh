@@ -13,6 +13,11 @@ CFIX=_legacy
 CFIX2=-legacy
 TAC=x86-64-v2
 fi
+if [ "x$1" = "xlegacy_super" ]; then
+CFIX=_legacy_super
+CFIX2=-legacy_super
+TAC=core2
+fi
 
 if [ "x$(which ccache)" != "x" ]; then
 export CC="ccache gcc" CXX="ccache g++"
@@ -27,7 +32,7 @@ export AR="gcc-ar"
 export RANLIB="gcc-ranlib"
 export NM="gcc-nm"
 
-curl -L "https://github.com/eebssk1/mingw-crt-build/releases/download/8265b59c/mingw-crt.tgz" | tar -zxf -
+curl -L "https://github.com/eebssk1/mingw-crt-build/releases/download/e689e563/mingw-crt.tgz" | tar -zxf -
 
 echo current utc time 1 is $(date -u)
 
