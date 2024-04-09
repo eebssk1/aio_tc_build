@@ -27,7 +27,7 @@ echo current utc time 1 is $(date -u)
 cd m_binutils; mkdir build; cd build
 
 ../configure --prefix=$CUR/out --target=i686-w64-mingw32 --enable-64-bit-bfd --enable-nls --disable-rpath --disable-multilib --enable-install-libiberty  --enable-plugins --enable-deterministic-archives --disable-werror --enable-lto --with-system-zlib --with-zstd --disable-gdb --disable-gprof --disable-gprofng || exit 255
-make -j2 all MAKEINFO=true || exit 255
+make -j$(($N+2)) all MAKEINFO=true || exit 255
 
 make -j install-strip MAKEINFO=true
 
@@ -49,7 +49,7 @@ export CXXFLAGS_FOR_TARGET="-Os -g1 -fPIC -DPIC"
 echo current utc time 3 is $(date -u)
 
 ../configure --prefix=$CUR/out --target=i686-w64-mingw32 --enable-checking=release --with-local-prefix=$CUR/out/i686-w64-mingw32/local --with-arch=prescott --with-tune=skylake --with-gcc-major-version-only --with-default-libstdcxx-abi=new --disable-vtable-verify --enable-libatomic --enable-threads=posix --enable-plugin --enable-graphite --enable-fully-dynamic-string --enable-libstdcxx-filesystem-ts --enable-libstdcxx-time --disable-libstdcxx-pch --enable-lto --enable-libgomp --disable-multilib --disable-rpath --enable-nls --disable-werror --disable-symvers --disable-libstdcxx-debug --enable-languages=c,c++,lto --disable-sjlj-exceptions --with-dwarf2 || exit 255
-make -j2 all MAKEINFO=true || exit 255
+make -j$(($N+2)) all MAKEINFO=true || exit 255
 
 make -j install-strip MAKEINFO=true
 

@@ -22,9 +22,9 @@ cd m_binutils; mkdir build; cd build
 echo current utc time 1 is $(date -u)
 
 ../configure --prefix=/usr --enable-gold --enable-pgo-build=lto --enable-nls --enable-plugins --enable-new-dtags --enable-x86-used-note --enable-generate-build-notes --disable-gprofng --with-system-zlib --with-zstd || exit 255
-make -j4 all MAKEINFO=true || exit 255
+make -j$(($N+4)) all MAKEINFO=true || exit 255
 
-make -j3 install-strip DESTDIR=$CUR/tmp MAKEINFO=true
+make -j install-strip DESTDIR=$CUR/tmp MAKEINFO=true
 
 echo current utc time 2 is $(date -u)
 
@@ -47,12 +47,12 @@ export CXXFLAGS_FOR_TARGET="-fPIC -DPIC -Os -g1"
 
 ../configure --prefix=/usr --enable-lto --disable-multilib --enable-libstdcxx-time --disable-libstdcxx-debug --enable-graphite --enable-__cxa_atexit --enable-threads --enable-languages=c,c++,lto --enable-gnu-indirect-function --enable-initfini-array --enable-gnu-unique-object --enable-plugin --enable-default-pie --with-gcc-major-version-only --enable-linker-build-id --with-default-libstdcxx-abi=new --enable-fully-dynamic-string --with-arch=haswell --with-tune=skylake --enable-checking=release --without-included-gettext --enable-clocale=gnu --with-build-config=bootstrap-lto-lean --with-system-zlib --disable-shared|| exit 255
 if [ "x$1" = "xprofile" ]; then
-make -j4 profiledbootstrap BOOT_CFLAGS="$CFLAGS" BOOT_CXXFLAGS="$CXXFLAGS" BOOT_LDFLAGS="$LDFLAGS" STAGE1_CFLAGS="$CFLAGS" STAGE1_CXXFLAGS="$CXXFLAGS" STAGE1_LDFLAGS="$LDFLAGS"  MAKEINFO=true || exit 255
+make -j$(($N+4)) profiledbootstrap BOOT_CFLAGS="$CFLAGS" BOOT_CXXFLAGS="$CXXFLAGS" BOOT_LDFLAGS="$LDFLAGS" STAGE1_CFLAGS="$CFLAGS" STAGE1_CXXFLAGS="$CXXFLAGS" STAGE1_LDFLAGS="$LDFLAGS"  MAKEINFO=true || exit 255
 else
-make -j4 bootstrap BOOT_CFLAGS="$CFLAGS" BOOT_CXXFLAGS="$CXXFLAGS" BOOT_LDFLAGS="$LDFLAGS" STAGE1_CFLAGS="$CFLAGS" STAGE1_CXXFLAGS="$CXXFLAGS" STAGE1_LDFLAGS="$LDFLAGS"  MAKEINFO=true || exit 255
+make -j$(($N+4)) bootstrap BOOT_CFLAGS="$CFLAGS" BOOT_CXXFLAGS="$CXXFLAGS" BOOT_LDFLAGS="$LDFLAGS" STAGE1_CFLAGS="$CFLAGS" STAGE1_CXXFLAGS="$CXXFLAGS" STAGE1_LDFLAGS="$LDFLAGS"  MAKEINFO=true || exit 255
 fi
 
-make -j3 install-strip DESTDIR=$CUR/tmp MAKEINFO=true
+make -j install-strip DESTDIR=$CUR/tmp MAKEINFO=true
 
 echo current utc time 4 is $(date -u)
 
