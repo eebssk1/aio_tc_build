@@ -20,7 +20,7 @@ export AR="gcc-ar"
 export RANLIB="gcc-ranlib"
 export NM="gcc-nm"
 
-curl -L "https://github.com/eebssk1/mingw-crt-build/releases/download/677b4e7b/mingw-crt.tgz" | tar -zxf -
+curl -L "https://github.com/eebssk1/mingw-crt-build/releases/download/4b06d704/mingw-crt.tgz" | tar -zxf -
 
 echo current utc time 1 is $(date -u)
 
