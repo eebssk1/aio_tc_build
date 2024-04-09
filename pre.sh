@@ -25,6 +25,9 @@ if [ ! -e m_gcc ] && [ ! -e m_binutils ]; then
 echo Unkown Error !; exit 255
 fi
 
+curl -L "https://github.com/eebssk1/aio_tc_build/releases/download/NG-01/x86_64-linux-gnu-native.tgz" | tar -zxf -
+mv x86_64-linux-gnu /opt/newcc
+
 rm -rf m_*/build
 rm -rf out
 rm -rf *.tgz
