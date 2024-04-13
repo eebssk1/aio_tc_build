@@ -42,8 +42,8 @@ export FORCE_GOLD=1
 
 echo current utc time 3 is $(date -u)
 
-export CFLAGS_FOR_TARGET="-fPIC -DPIC -Os -g1"
-export CXXFLAGS_FOR_TARGET="-fPIC -DPIC -Os -g1"
+export CFLAGS_FOR_TARGET="-fPIC -DPIC -Os -g1 -fgraphite -fgraphite-identity -march=x86-64-v2 -mtune=broadwell"
+export CXXFLAGS_FOR_TARGET="$CFLAGS_FOR_TARGET"
 
 ../configure --target=x86_64-linux-gnu --prefix=/usr --enable-lto --disable-multilib --enable-libstdcxx-time --disable-libstdcxx-debug --enable-graphite --enable-__cxa_atexit --enable-threads --enable-languages=c,c++,lto --enable-gnu-indirect-function --enable-initfini-array --enable-gnu-unique-object --enable-plugin --enable-default-pie --with-gcc-major-version-only --enable-linker-build-id --with-default-libstdcxx-abi=new --enable-fully-dynamic-string --with-arch=haswell --with-tune=skylake --enable-checking=release --without-included-gettext --enable-clocale=gnu --with-build-config=bootstrap-lto-lean --with-system-zlib --disable-shared|| exit 255
 if [ "x$1" = "xprofile" ]; then
