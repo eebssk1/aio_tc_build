@@ -54,6 +54,8 @@ jobs:
           key: t_${{ matrix.target }}
       - name: build
         run: exec stdbuf -oL ./exec.sh ${{ matrix.target }}
+      - name: log rename
+        run: mv out.log stdout_${{ matrix.target }}.log || true
       - name: collect config log
         if: (!cancelled())
         run: exec ./logtar.sh
@@ -72,11 +74,12 @@ jobs:
           path: |
             ./conflogs*.tgz
             ./curouts*.tgz
+            ./stdout_*.log
       - name: release
         uses: ncipollo/release-action@v1.13.0
         with:
           allowUpdates: true
-          artifacts: "*native.tgz,*cross.tgz,conflogs*.tgz,onelog.txt"
+          artifacts: "*native.tgz,*cross.tgz,conflogs*.tgz,onelog.txt,stdout_*.log"
           commit: main
           makeLatest: true
           tag: ${{ env.TAG }}
