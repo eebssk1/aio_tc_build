@@ -30,7 +30,7 @@ if [ -e x86_64-linux-gnu ]; then
 echo "Hmm? Huh!"
 else
 if [ x$NO_TC_DOWN = x ] && ( [ ! -e /opt/newcc ] || [ ! -e ~/x86_64-linux-gnu ] ); then
-curl -L "https://github.com/eebssk1/aio_tc_build/releases/download/NG-01/x86_64-linux-gnu-native.tgz" | tar -zxf -
+curl -L "https://github.com/eebssk1/aio_tc_build/releases/download/NG-02/x86_64-linux-gnu-native.tgz" | tar -zxf -
 mv x86_64-linux-gnu /opt/newcc
 fi
 fi
