@@ -1,4 +1,21 @@
 #!/bin/sh
+set -m
+
+if [ x$IN0 = x ]; then
+export IN0=1
+exec stdbuf -oL $0 "$@"
+fi
+
+if [ x$IN1 = x ]; then
+export IN1=1
+./$0 "$@" > $PWD/out.log &
+P=$!
+tail -f $PWD/out.log --pid=$P &
+fg %1
+exit $?
+fi
+
+export GZIP=-9
 
 ulimit -S -s 32768
 ulimit -S -a
