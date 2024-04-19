@@ -15,7 +15,7 @@ export CFLAGS="-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=1 -flto-compression-level=7 -
 export CXXFLAGS="$CFLAGS"
 export LDFLAGS="-L/usr/local/lib @$CUR/ldflags"
 
-export CFLAGS_FOR_TARGET="-fPIC -DPIC -Os -g1 -fgraphite -fgraphite-identity -ffunction-sections -fdata-sections  -march=x86-64-v2 -mtune=broadwell"
+export CFLAGS_FOR_TARGET="-fPIC -DPIC -O3 -g1 -fgraphite -fgraphite-identity -fipa-pta -flive-range-shrinkage -fsched-pressure -fsched-spec-load -ftree-lrs -fsched-stalled-insns=8 -fsched-stalled-insns-dep=12 -malign-data=cacheline -ffunction-sections -fdata-sections  -march=ivybridge -mtune=broadwell"
 export CXXFLAGS_FOR_TARGET="$CFLAGS_FOR_TARGET"
 
 export PATH=$CUR/out/bin:$PATH
