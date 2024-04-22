@@ -13,14 +13,14 @@ fi
 
 export PATH=$CUR/out/bin:$PATH
 
-export CFLAGS="-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=1 -I/usr/local/include  @$CUR/gccflags -ffunction-sections -fdata-sections -flto-compression-level=1 -flto=2 -frandom-seed=1"
+export CFLAGS="-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=1 -I/usr/local/include  @$CUR/gccflags -ffunction-sections -fdata-sections -flto-compression-level=7 -flto=2 -frandom-seed=1"
 export CXXFLAGS="$CFLAGS"
 export LDFLAGS="-L/usr/local/lib @$CUR/ldflags"
 export AR="gcc-ar"
 export RANLIB="gcc-ranlib"
 export NM="gcc-nm"
 
-curl -L "https://github.com/eebssk1/mingw-crt-build/releases/download/4b06d704/mingw-crt.tgz" | tar -zxf -
+curl -L "https://github.com/eebssk1/mingw-crt-build/releases/download/42c035c4/mingw-crt.tgz" | tar -zxf -
 
 echo current utc time 1 is $(date -u)
 
@@ -43,8 +43,8 @@ cd m_gcc; mkdir build; cd build
 export lt_cv_deplibs_check_method='pass_all'
 export CPPFLAGS_FOR_TARGET="-DWIN32_LEAN_AND_MEAN -DCOM_NO_WINDOWS_H -Wl,--large-address-aware -fdata-sections @$CUR/gccflagsm"
 export LDFLAGS_FOR_TARGET="@$CUR/ldflagsm"
-export CFLAGS_FOR_TARGET="-Os -g1 -fPIC -DPIC"
-export CXXFLAGS_FOR_TARGET="-Os -g1 -fPIC -DPIC"
+export CFLAGS_FOR_TARGET="-O3 -g1"
+export CXXFLAGS_FOR_TARGET="$CFLAGS_FOR_TARGET"
 
 echo current utc time 3 is $(date -u)
 
