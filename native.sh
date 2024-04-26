@@ -56,7 +56,7 @@ export FORCE_GOLD=1
 echo current utc time 3 is $(date -u)
 
 if [ x$FULL_LTO = x ]; then
-echo "2 stage LTO enabled !"
+echo "2 stage LTO disabled !"
 DED=-lean
 fi
 
