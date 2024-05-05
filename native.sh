@@ -24,7 +24,7 @@ cd m_binutils; mkdir build; cd build
 
 echo current utc time 1 is $(date -u)
 
-../configure --target=x86_64-linux-gnu --prefix=/usr --enable-gold --enable-pgo-build=lto --enable-nls --enable-plugins --enable-compressed-debug-sections=all --enable-checking=release --enable-new-dtags --enable-x86-used-note --enable-generate-build-notes --disable-gprofng --with-system-zlib --with-zstd || exit 255
+../configure --target=x86_64-linux-gnu --prefix=/usr --enable-gold --enable-pgo-build=lto --enable-nls --enable-plugins --enable-multilib --enable-compressed-debug-sections=all --enable-checking=release --enable-new-dtags --enable-x86-used-note --enable-generate-build-notes --disable-gprofng --with-system-zlib --with-zstd || exit 255
 make -j$(($N+4)) all MAKEINFO=true || exit 255
 
 make -j install-strip DESTDIR=$CUR/tmp MAKEINFO=true
@@ -60,7 +60,11 @@ echo "2 stage LTO disabled !"
 DED=-lean
 fi
 
-../configure --host=x86_64-linux-gnu --prefix=/usr --enable-version-specific-runtime-libs --enable-lto --disable-cet --disable-multilib --enable-libstdcxx-time --disable-libstdcxx-debug --enable-graphite --enable-__cxa_atexit --enable-threads --enable-languages=c,c++,lto --enable-gnu-indirect-function --enable-initfini-array --enable-gnu-unique-object --enable-plugin --enable-default-pie --with-gcc-major-version-only --enable-linker-build-id --with-default-libstdcxx-abi=new --enable-fully-dynamic-string --with-arch=haswell --with-tune=skylake --enable-checking=release --without-included-gettext --enable-clocale=gnu --with-build-config=bootstrap-lto$DED --with-system-zlib --enable-shared=libgcc,libgcov,libitm,libssp,libsanitizer || exit 255
+if [ x$NO_LTO = x ]; then
+LTO="--with-build-config=bootstrap-lto$DED"
+fi
+
+../configure --host=x86_64-linux-gnu --build=x86_64-linux-gnu --target=x86_64-linux-gnu --prefix=/usr --enable-version-specific-runtime-libs --enable-lto --disable-cet --enable-multiarch --with-arch-32=prescott --enable-multilib --with-multilib-list=m32,m64 --with-abi=m64 --enable-libstdcxx-time --disable-libstdcxx-debug --disable-libstdcxx-pch --enable-graphite --enable-__cxa_atexit --enable-threads --enable-languages=c,c++,lto --enable-gnu-indirect-function --enable-initfini-array --enable-gnu-unique-object --enable-plugin --enable-default-pie --with-gcc-major-version-only --enable-linker-build-id --with-default-libstdcxx-abi=new --enable-fully-dynamic-string --with-arch=haswell --with-tune=skylake --enable-checking=release --without-included-gettext --enable-clocale=gnu $LTO --with-system-zlib --enable-shared=libgcc,libgcov,libitm,libssp,libsanitizer || exit 255
 if [ "x$1" = "xprofile" ]; then
 make -j$(($N+4)) profiledbootstrap BOOT_CFLAGS="$CFLAGS" BOOT_CXXFLAGS="$CXXFLAGS" BOOT_LDFLAGS="$LDFLAGS" STAGE1_CFLAGS="$CFLAGS" STAGE1_CXXFLAGS="$CXXFLAGS" STAGE1_LDFLAGS="$LDFLAGS"  MAKEINFO=true || exit 255
 else
@@ -82,10 +86,6 @@ echo "Creating cc/c++ to overlap system compilers ..."
 ln -f $CUR/out/bin/gcc $CUR/out/bin/cc
 ln -f $CUR/out/bin/g++ $CUR/out/bin/c++
 fi
-
-echo "Linking shared libgcc to compiler path ..."
-RLPATH=$(find -L $CUR/out -name libgcc.a | sed 's/libgcc.a//')
-find -L $CUR/out -name libgcc_s.so* -exec ln "{}" $RLPATH \;
 
 mv out x86_64-linux-gnu
 tar -zcf x86_64-linux-gnu-native.tgz x86_64-linux-gnu
