@@ -88,6 +88,6 @@ ln -f $CUR/out/bin/g++ $CUR/out/bin/c++
 fi
 
 mv out x86_64-linux-gnu
-tar -zcf x86_64-linux-gnu-native.tgz x86_64-linux-gnu
+tar -I 'bzip2 -9' -cf x86_64-linux-gnu-native.tb2 x86_64-linux-gnu
 ln -s x86_64-linux-gnu out || exit 0
 

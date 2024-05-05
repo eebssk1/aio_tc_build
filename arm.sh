@@ -70,5 +70,5 @@ echo current utc time 4 is $(date -u)
 cd $CUR
 
 mv out $TARGET
-tar -zcf $TARGET-cross.tgz $TARGET
+tar -I 'bzip2 -9' -cf $TARGET-cross.tgz $TARGET
 ln -s $TARGET out || exit 0

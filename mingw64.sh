@@ -70,5 +70,5 @@ echo current utc time 4 is $(date -u)
 cd $CUR
 
 mv out x86_64-w64$CFIX-mingw32
-tar -zcf x86_64-w64$CFIX-mingw32-cross.tgz x86_64-w64$CFIX-mingw32
+tar -I 'bzip2 -9' -cf x86_64-w64$CFIX-mingw32-cross.tb2 x86_64-w64$CFIX-mingw32
 ln -s x86_64-w64$CFIX-mingw32 out || exit 0
