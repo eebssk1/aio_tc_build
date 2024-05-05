@@ -9,8 +9,8 @@ echo ID is $RND
 echo "logs > $FILES"
 echo "taring logs"
 tar -zhcf conflogs_$RND.tgz $FILES
-LA=$(find . -type f -name "*cross.tgz")
-LB=$(find . -type f -name "*native.tgz")
+LA=$(find . -type f -name "*cross.tb2")
+LB=$(find . -type f -name "*native.tb2")
 if [ "x$LA" = "x" ] && [ "x$LB" = "x" ]; then
 echo "taring current output"
 tar -zhcf curouts_$RND.tgz out

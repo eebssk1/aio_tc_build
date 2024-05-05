@@ -59,5 +59,5 @@ cd $CUR
 
 mv out i686-w64-mingw32
 
-tar -zcf i686-w64-mingw32-cross.tgz i686-w64-mingw32
+tar -I 'bzip2 -9' -cf i686-w64-mingw32-cross.tb2 i686-w64-mingw32
 ln -s i686-w64-mingw32 out || exit 0

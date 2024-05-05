@@ -64,8 +64,8 @@ jobs:
         with:
           name: result
           path: |
-            ./*native.tgz
-            ./*cross.tgz
+            ./*native.tb2
+            ./*cross.tb2
       - name: upload debug output
         if: (!cancelled())
         uses: actions/upload-artifact@v3
@@ -79,7 +79,7 @@ jobs:
         uses: ncipollo/release-action@v1.13.0
         with:
           allowUpdates: true
-          artifacts: "*native.tgz,*cross.tgz,conflogs*.tgz,onelog.txt,stdout_*.log"
+          artifacts: "*native.tb2,*cross.tb2,conflogs*.tgz,onelog.txt,stdout_*.log"
           commit: main
           makeLatest: true
           tag: ${{ env.TAG }}
