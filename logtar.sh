@@ -3,7 +3,7 @@
 echo $PWD
 ls -hlA
 
-FILES=$(find m_* -type f -name "config.log")
+FILES=$(find m_*/build -type f -name "config.log")
 RND=$(dd if=/dev/urandom bs=32 count=1 2>/dev/null | od -An -N2 -i | tr -d ' \n')
 echo ID is $RND
 echo "logs > $FILES"
