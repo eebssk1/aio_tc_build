@@ -7,16 +7,19 @@ export PATH=/opt/newcc/bin:$PATH
 export LD_LIBRARY_PATH=/opt/newcc/lib
 fi
 
+MLIB=1
 TAC=haswell
 if [ "x$1" = "xlegacy" ]; then
 CFIX=_legacy
 CFIX2=-legacy
 TAC=ivybridge
+MLIB=0
 fi
 if [ "x$1" = "xlegacy_super" ]; then
 CFIX=_legacy_super
 CFIX2=-legacy_super
 TAC=core2
+MLIB=0
 fi
 
 if [ "x$(which ccache)" != "x" ]; then
@@ -32,13 +35,13 @@ export AR="gcc-ar"
 export RANLIB="gcc-ranlib"
 export NM="gcc-nm"
 
-curl -L "https://github.com/eebssk1/mingw-crt-build/releases/download/c9fb8763/mingw-crt.tgz" | tar -zxf -
+curl -L "https://github.com/eebssk1/mingw-crt-build/releases/download/623d0d8d/mingw-crt.tgz" | tar -zxf -
 
 echo current utc time 1 is $(date -u)
 
 cd m_binutils; mkdir build; cd build
 
-../configure --prefix=$CUR/out --target=x86_64-w64-mingw32 --enable-64-bit-bfd --enable-checking=release --enable-nls --disable-rpath --disable-multilib --enable-install-libiberty --enable-plugins --enable-deterministic-archives --disable-werror --enable-lto --with-system-zlib --with-zstd --disable-gdb --disable-gprof --disable-gprofng || exit 255
+../configure --prefix=$CUR/out --target=x86_64-w64-mingw32 --enable-64-bit-bfd --enable-checking=release --enable-nls --disable-rpath --enable-install-libiberty --enable-plugins --enable-deterministic-archives --disable-werror --enable-lto --with-system-zlib --with-zstd --disable-gdb --disable-gprof --disable-gprofng || exit 255
 make -j$(($N+2)) all MAKEINFO=true || exit 255
 
 make -j install-strip MAKEINFO=true
@@ -50,6 +53,15 @@ cd $CUR
 cp -a mingw-crt/ucrt64$CFIX2/. out/x86_64-w64-mingw32/
 ln -s . out/x86_64-w64-mingw32/usr
 
+if [ x$MLIB = x1 ]; then
+echo multilib enabled ~.
+MLPAR="--enable-multiarch --enable-multilib --with-arch-32=prescott --with-multilib-list=m32,m64 --with-abi=m64"
+mkdir -p out/x86_64-w64-mingw32/lib/32
+cp -a mingw-crt/msvcrt32/lib/. out/x86_64-w64-mingw32/lib/32/
+else
+MLPAR="--disable-multiarch --disable-multilib"
+fi
+
 cd m_gcc; mkdir build; cd build
 
 export lt_cv_deplibs_check_method='pass_all'
@@ -60,7 +72,7 @@ export CXXFLAGS_FOR_TARGET="$CFLAGS_FOR_TARGET"
 
 echo current utc time 3 is $(date -u)
 
-../configure --prefix=$CUR/out --target=x86_64-w64-mingw32 --enable-checking=release --with-local-prefix=$CUR/out/x86_64-w64-mingw32/local  --with-arch=$TAC --with-tune=skylake --with-gcc-major-version-only --with-default-libstdcxx-abi=new --disable-cet --disable-vtable-verify --enable-plugin  --enable-libatomic --enable-threads=posix --enable-graphite --enable-fully-dynamic-string --enable-libstdcxx-filesystem-ts --enable-libstdcxx-time --disable-libstdcxx-pch --enable-lto --enable-libgomp --enable-shared=libgcc --disable-multilib --disable-rpath --enable-nls --disable-werror --disable-symvers --disable-libstdcxx-debug --enable-languages=c,c++,lto --disable-sjlj-exceptions || exit 255
+../configure --prefix=$CUR/out --target=x86_64-w64-mingw32 --enable-version-specific-runtime-libs --enable-checking=release --with-local-prefix=$CUR/out/x86_64-w64-mingw32/local  --with-arch=$TAC --with-tune=skylake --with-gcc-major-version-only --with-default-libstdcxx-abi=new --disable-cet --disable-vtable-verify --enable-plugin  --enable-libatomic --enable-threads=posix --enable-graphite --enable-fully-dynamic-string --enable-libstdcxx-filesystem-ts --enable-libstdcxx-time --disable-libstdcxx-pch --enable-lto --enable-libgomp --enable-shared=libgcc,libgcov $MLPAR --disable-rpath --enable-nls --disable-werror --disable-symvers --disable-libstdcxx-debug --enable-languages=c,c++,lto --disable-sjlj-exceptions || exit 255
 make -j$(($N+2)) all MAKEINFO=true || exit 255
 
 make -j install-strip MAKEINFO=true

@@ -37,7 +37,7 @@ fi
 
 rm -rf m_*/build
 rm -rf out
-rm -rf *.tgz
+rm -rf *.tgz *.tb2
 rm -rf time-*
 rm -rf tmp
-rm -rf x86_64-linux-gnu*
+rm -rf x86_64-* i686-* aarch-* arm*-*
