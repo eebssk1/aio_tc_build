@@ -23,6 +23,7 @@ export PATH=$CUR/out/bin:$PATH
 cd m_binutils; mkdir build; cd build
 
 echo current utc time 1 is $(date -u)
+TMS=$(date +%s)
 
 ../configure --target=x86_64-linux-gnu --prefix=/usr --enable-gold --enable-pgo-build=lto --enable-nls --enable-plugins --enable-multilib --enable-compressed-debug-sections=all --enable-checking=release --enable-new-dtags --enable-x86-used-note --enable-generate-build-notes --disable-gprofng --with-system-zlib --with-zstd || exit 255
 make -j$(($N+4)) all MAKEINFO=true || exit 255
@@ -30,6 +31,7 @@ make -j$(($N+4)) all MAKEINFO=true || exit 255
 make -j install-strip DESTDIR=$CUR/tmp MAKEINFO=true
 
 echo current utc time 2 is $(date -u)
+TMM=$(date +%s)
 
 cd $CUR
 
@@ -76,7 +78,7 @@ make -j install-strip DESTDIR=$CUR/tmp MAKEINFO=true
 
 
 echo current utc time 4 is $(date -u)
-
+TME=$(date +%s)
 cd $CUR
 
 cp -a tmp/usr/. out/
@@ -86,6 +88,11 @@ echo "Creating cc/c++ to overlap system compilers ..."
 ln -f $CUR/out/bin/gcc $CUR/out/bin/cc
 ln -f $CUR/out/bin/g++ $CUR/out/bin/c++
 fi
+
+TMT0=$((($TMM-$TMS)/60))
+TMT1=$((($TME-$TMM)/60))
+TMA=$(($TMT0+$TMT1))
+echo "part 1 took $TMT0 min, part 2 took $TMT1 min, which sum to $TMA min together!"
 
 mv out x86_64-linux-gnu
 tar -I 'bzip2 -9' -cf x86_64-linux-gnu-native.tb2 x86_64-linux-gnu

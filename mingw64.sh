@@ -38,6 +38,7 @@ export NM="gcc-nm"
 curl -L "https://github.com/eebssk1/mingw-crt-build/releases/download/623d0d8d/mingw-crt.tgz" | tar -zxf -
 
 echo current utc time 1 is $(date -u)
+TMS=$(date +%s)
 
 cd m_binutils; mkdir build; cd build
 
@@ -45,6 +46,7 @@ cd m_binutils; mkdir build; cd build
 make -j$(($N+2)) all MAKEINFO=true || exit 255
 
 make -j install-strip MAKEINFO=true
+TMM=$(date +%s)
 
 echo current utc time 2 is $(date -u)
 
@@ -78,6 +80,11 @@ make -j$(($N+2)) all MAKEINFO=true || exit 255
 make -j install-strip MAKEINFO=true
 
 echo current utc time 4 is $(date -u)
+TME=$(date +%s)
+TMT0=$((($TMM-$TMS)/60))
+TMT1=$((($TME-$TMM)/60))
+TMA=$(($TMT0+$TMT1))
+echo "part 1 took $TMT0 min, part 2 took $TMT1 min, which sum to $TMA min together!"
 
 cd $CUR
 
