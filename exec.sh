@@ -10,9 +10,6 @@ export IN1=1
 exec script -q -e -c "$0 "$@"" ./out.log
 fi
 
-export GZIP=-9
-export GZIP_OPT=-9
-
 ulimit -S -s 32768
 ulimit -S -a
 ulimit -H -a
@@ -61,7 +58,8 @@ mingw64-legacy-super-cross)
 exec $CUR/mingw64.sh legacy_super
 ;;
 mingw32-cross)
-exec $CUR/mingw32.sh
+echo this build is included in mingw64 as multilib/arch now !
+exit 0
 ;;
 arm64-cross)
 exec $CUR/arm.sh 64
