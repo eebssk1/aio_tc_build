@@ -35,7 +35,7 @@ export AR="gcc-ar"
 export RANLIB="gcc-ranlib"
 export NM="gcc-nm"
 
-curl -L "https://github.com/eebssk1/mingw-crt-build/releases/download/623d0d8d/mingw-crt.tgz" | tar -zxf -
+curl -L "https://github.com/eebssk1/mingw-crt-build/releases/download/a11d790e/mingw-crt.tgz" | tar -zxf -
 
 echo current utc time 1 is $(date -u)
 TMS=$(date +%s)
@@ -58,8 +58,10 @@ ln -s . out/x86_64-w64-mingw32/usr
 if [ x$MLIB = x1 ]; then
 echo multilib enabled ~.
 MLPAR="--enable-multiarch --enable-multilib --with-arch-32=prescott --with-multilib-list=m32,m64 --with-abi=m64"
-mkdir -p out/x86_64-w64-mingw32/lib/32
-cp -a mingw-crt/msvcrt32/lib/. out/x86_64-w64-mingw32/lib/32/
+mkdir -p out/x86_64-w64-mingw32/lib32
+cp -a mingw-crt/msvcrt32/lib/. out/x86_64-w64-mingw32/lib32/
+cp -a mingw-crt/msvcrt32/lib32/. out/x86_64-w64-mingw32/lib32/
+ln -s ../lib32 out/x86_64-w64-mingw32/lib/32
 else
 MLPAR="--disable-multiarch --disable-multilib"
 fi
