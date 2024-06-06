@@ -14,6 +14,8 @@ apt-get install -y libtcmalloc-minimal4 bsdextrautils
 apt-get install -y zlib1g-dev libzstd-dev libgmp-dev libmpc-dev pkg-config libisl-dev libc6-dev-i386
 fi
 
+git config --system --add safe.directory '*'
+
 if [ ! -e m_binutils ]; then
 git clone --single-branch --depth=1 https://github.com/eebssk1/m_binutils || exit 255
 fi
