@@ -25,6 +25,10 @@ if [ ! -e m_gcc ] && [ ! -e m_binutils ]; then
 echo Unkown Error !; exit 255
 fi
 
+echo "This: $(git log --no-decorate -1 --oneline)" >> notes.txt
+echo "GCC: $(cd m_gcc; git log --no-decorate -1 --oneline)" >> notes.txt
+echo "BinUtils: $(cd m_binutils; git log --no-decorate -1 --oneline)" >> notes.txt
+
 
 if [ -e x86_64-linux-gnu ]; then
 echo "Hmm? Huh!"

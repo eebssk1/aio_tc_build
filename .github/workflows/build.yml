@@ -84,4 +84,4 @@ jobs:
           makeLatest: true
           tag: ${{ env.TAG }}
           name: ${{ env.TAG }}_${{ env.TIME }}
-
+          bodyFile: notes.txt
