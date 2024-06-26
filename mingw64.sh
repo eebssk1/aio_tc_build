@@ -35,7 +35,7 @@ export AR="gcc-ar"
 export RANLIB="gcc-ranlib"
 export NM="gcc-nm"
 
-curl -L "https://github.com/eebssk1/mingw-crt-build/releases/download/a0dea4e1/mingw-crt.tgz" | tar -zxf -
+curl -L "https://github.com/eebssk1/mingw-crt-build/releases/download/f85f20d6/mingw-crt.tgz" | tar -zxf -
 
 echo current utc time 1 is $(date -u)
 TMS=$(date +%s)
