@@ -90,6 +90,11 @@ echo "part 1 took $TMT0 min, part 2 took $TMT1 min, which sum to $TMA min togeth
 
 cd $CUR
 
+if [ $MLIB = 1 ]; then
+echo "Copy multi-arch compability wrapper !"
+cp -dr $CUR/mingw-32-wrapper/. out/bin/
+fi
+
 mv out x86_64-w64$CFIX-mingw32
 tar -I 'bzip2 -9' -cf x86_64-w64$CFIX-mingw32-cross.tb2 x86_64-w64$CFIX-mingw32
 ln -s x86_64-w64$CFIX-mingw32 out || exit 0
