@@ -11,11 +11,11 @@ if [ "x$(which ccache)" != "x" ]; then
 export CC="ccache gcc" CXX="ccache g++"
 fi
 
-export CFLAGS="-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=1 -flto-compression-level=7 -fprofile-partial-training -I/usr/local/include  @$CUR/gccflags -ffunction-sections -fdata-sections"
+export CFLAGS="-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=1 -flto-compression-level=7 -fprofile-partial-training -I/usr/local/include  @$CUR/gccflags @$CUR/gccparam"
 export CXXFLAGS="$CFLAGS"
 export LDFLAGS="-L/usr/local/lib @$CUR/ldflags"
 
-export CFLAGS_FOR_TARGET="-fPIC -DPIC -O3 -g1 -fgraphite -fgraphite-identity -flive-range-shrinkage -fschedule-insns -fsched-pressure -fsched-spec-load -ftree-lrs -fsched-stalled-insns=8 -fsched-stalled-insns-dep=12 -malign-data=cacheline -mrelax-cmpxchg-loop -ffunction-sections -fdata-sections  -march=ivybridge -mtune=icelake-client"
+export CFLAGS_FOR_TARGET="-fPIC -DPIC -O3 -g1 -fgraphite -fgraphite-identity -flive-range-shrinkage -fschedule-insns -fsched-pressure -fsched-spec-load -ftree-lrs -fsched-stalled-insns=8 -fsched-stalled-insns-dep=12 -malign-data=cacheline -mrelax-cmpxchg-loop -ffunction-sections -fdata-sections  -march=ivybridge -mtune=icelake-client @$CUR/gccparam"
 export CXXFLAGS_FOR_TARGET="$CFLAGS_FOR_TARGET"
 
 export PATH=$CUR/out/bin:$PATH
