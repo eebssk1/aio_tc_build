@@ -62,7 +62,7 @@ export LDFLAGS_FOR_TARGET="@$CUR/ldflagsma"
 
 echo current utc time 3 is $(date -u)
 
-../configure --prefix=$CUR/out --target=$TARGET --enable-checking=release --enable-libatomic --enable-threads --enable-graphite --enable-fully-dynamic-string --enable-libstdcxx-filesystem-ts --enable-libstdcxx-time --enable-lto --enable-plugin --enable-libgomp --disable-libssp --disable-multilib --disable-rpath --enable-nls --disable-werror --disable-symvers --with-gcc-major-version-only --enable-linker-build-id --disable-vtable-verify --enable-default-pie  --with-default-libstdcxx-abi=new  --disable-libstdcxx-debug --disable-libsanitizer --enable-languages=c,c++,lto || exit 255
+../configure --prefix=$CUR/out --target=$TARGET --enable-checking=release --disable-fixincludes --enable-libatomic --enable-threads --enable-graphite --enable-fully-dynamic-string --enable-libstdcxx-filesystem-ts --enable-libstdcxx-time --enable-lto --enable-plugin --enable-libgomp --disable-libssp --disable-multilib --disable-rpath --enable-nls --disable-werror --disable-symvers --with-gcc-major-version-only --enable-linker-build-id --disable-vtable-verify --enable-default-pie  --with-default-libstdcxx-abi=new  --disable-libstdcxx-debug --disable-libsanitizer --enable-languages=c,c++,lto || exit 255
 make -j$(($N+2)) all MAKEINFO=true || exit 255
 
 make -j install-strip MAKEINFO=true
