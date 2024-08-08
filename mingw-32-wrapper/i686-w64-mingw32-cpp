@@ -6,4 +6,4 @@ if [ "$Where" = "/" ]; then
 Where=
 fi
 
-exec ${Where}x86_64-w64-mingw32-as --32 "$@"
+exec ${Where}x86_64-w64-mingw32-cpp -m32 "$@"
