@@ -1,1 +1,1 @@
--O3 -g1 -fgraphite -fgraphite-identity -flive-range-shrinkage -fschedule-insns -fsched-pressure -fsched-spec-load -ftree-lrs -fsched-stalled-insns=8 -fsched-stalled-insns-dep=12 -fgcse-las -fgcse-sm -fira-region=all -mrelax-cmpxchg-loop -malign-data=cacheline
+-O3 -g1 -fgraphite -fgraphite-identity -flive-range-shrinkage -fschedule-insns -fsched-pressure -fsched-spec-load -ftree-lrs -fsched-stalled-insns=8 -fsched-stalled-insns-dep=12 -fgcse-las -fgcse-sm -fira-region=mixed -mrelax-cmpxchg-loop -malign-data=cacheline
