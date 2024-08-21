@@ -1,7 +1,7 @@
 #!/bin/sh
 
 if [ "x$VERBOSE_LD" != "x" ]; then
-echo "$@"
+echo "$@" >&2
 fi
 
 if [ "x$FORCE_GOLD" != "x" ]; then
