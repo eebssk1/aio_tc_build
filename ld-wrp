@@ -1,7 +1,14 @@
 #!/bin/sh
 
 if [ "x$VERBOSE_LD" != "x" ]; then
-echo "$@" >&2
+CTT="$@"
+case "$@" in
+@/tmp/*)
+C=$(echo "$@" | cut -c 2-)
+CTT="$(cat "$C")"
+;;
+esac
+echo "$CTT" >&2
 fi
 
 if [ "x$FORCE_GOLD" != "x" ]; then
