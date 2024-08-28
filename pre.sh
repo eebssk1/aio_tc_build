@@ -11,7 +11,7 @@ else
 apt-get update -y
 apt-get upgrade -y
 apt-get install -y libtcmalloc-minimal4 bsdextrautils
-apt-get install -y zlib1g-dev libzstd-dev libgmp-dev libmpc-dev pkg-config libisl-dev libc6-dev-i386
+apt-get install -y zlib1g-dev libzstd-dev libgmp-dev libmpc-dev pkg-config libisl-dev libc6-dev-i386 musl musl-dev
 fi
 
 git config --system --add safe.directory '*'

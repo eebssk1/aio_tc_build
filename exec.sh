@@ -67,6 +67,9 @@ exec $CUR/arm.sh 64
 arm32-cross)
 exec $CUR/arm.sh 32
 ;;
+musl-cross)
+exec $CUR/musl.sh
+;;
 *)
 echo "unknown target !"
 exit 255
