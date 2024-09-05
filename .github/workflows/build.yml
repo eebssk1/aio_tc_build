@@ -60,23 +60,23 @@ jobs:
         if: (!cancelled())
         run: exec ./logtar.sh
       - name: upload result
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: result
+          name: result_${{ matrix.target }}
           path: |
             ./*native.tb2
             ./*cross.tb2
       - name: upload debug output
         if: (!cancelled())
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: debug
+          name: debug_${{ matrix.target }}
           path: |
             ./conflogs*.tgz
             ./curouts*.tgz
             ./stdout_*.log
       - name: release
-        uses: ncipollo/release-action@v1.13.0
+        uses: ncipollo/release-action@v1.14.0
         with:
           allowUpdates: true
           artifacts: "*native.tb2,*cross.tb2,conflogs*.tgz,onelog.txt,stdout_*.log"
