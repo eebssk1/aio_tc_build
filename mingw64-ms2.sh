@@ -28,9 +28,10 @@ echo current utc time 2 is $(date -u)
 
 cd $CUR
 
+#not required under msys2?
 tar --bzip -xf gcc-dep.tb2
-cp -a gcc-dep/lib/*.a out/x86_64-w64-mingw32/lib
-cp -a gcc-dep/lib/*.dll out/bin
+cp -a gcc-dep/lib/*.a out/x86_64-w64-mingw32/lib/
+cp -a gcc-dep/lib/*.dll out/bin/
 
 cp -a mingw-crt/ucrt64-legacy/. out/x86_64-w64-mingw32/
 
