@@ -1,5 +1,6 @@
 #!/bin/sh
 
+if [ "$1" != "mingw64-msys2" ]; then
 if [ x$IN0 = x ]; then
 export IN0=1
 exec stdbuf -oL $0 "$@"
@@ -9,12 +10,15 @@ if [ x$IN1 = x ]; then
 export IN1=1
 exec script -q -e -c "$0 "$@"" ./out.log
 fi
+fi
 
 ulimit -S -s 32768
 ulimit -S -a
 ulimit -H -a
 
+if [ -e /etc/environment ]; then
 . /etc/environment
+fi
 
 CUR=$PWD
 
@@ -47,6 +51,12 @@ exec $CUR/native.sh
 ;;
 linux-native-profile)
 exec $CUR/native.sh profile
+;;
+mingw64-win)
+exec $CUR/mingw64-n.sh
+;;
+mingw64-msys2)
+exec $CUR/mingw64-ms2.sh
 ;;
 mingw64-cross)
 exec $CUR/mingw64.sh
