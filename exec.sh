@@ -14,7 +14,9 @@ ulimit -S -s 32768
 ulimit -S -a
 ulimit -H -a
 
+if [ -e /etc/environment ]; then
 . /etc/environment
+fi
 
 CUR=$PWD
 
@@ -47,6 +49,12 @@ exec $CUR/native.sh
 ;;
 linux-native-profile)
 exec $CUR/native.sh profile
+;;
+mingw64-win)
+exec $CUR/mingw64-n.sh
+;;
+mingw64-msys2)
+exec $CUR/mingw64-ms2.sh
 ;;
 mingw64-cross)
 exec $CUR/mingw64.sh

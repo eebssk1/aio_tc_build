@@ -43,7 +43,7 @@ fi
 
 rm -rf m_*/build
 rm -rf out
-rm -rf *.tgz *.tb2
+rm -rf *.tgz *cross*.tb2 *native*.tb2
 rm -rf time-*
 rm -rf tmp
 rm -rf x86_64-* i686-* aarch-* arm*-*
