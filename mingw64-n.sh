@@ -22,7 +22,7 @@ export CXXFLAGS="$CFLAGS"
 export LDFLAGS="-L$CUR/gcc-dep/lib @$CUR/ldflagsm"
 export CPPFLAGS="-I$CUR/gcc-dep/include"
 
-curl -L "https://github.com/eebssk1/mingw-crt-build/releases/latest/download/mingw-crt.tgz" | tar -zxf -
+curl -L "https://github.com/eebssk1/mingw-crt-build/releases/latest/download/mingw-crt.tgz" | tar -zxf - || exit 255
 
 echo current utc time 1 is $(date -u)
 TMS=$(date +%s)
@@ -31,8 +31,8 @@ mkdir -p out/x86_64-w64-mingw32
 cp -a mingw-crt/ucrt64-legacy/. out/x86_64-w64-mingw32/
 mkdir out/x86_64-w64-mingw32/lib/32
 cp -a mingw-crt/msvcrt32/lib/.  out/x86_64-w64-mingw32/lib/32
-cp -a $HOME/gcc-dep/lib/*.a out/x86_64-w64-mingw32/lib
-cp -a $HOME/gcc-dep/lib/*.dll out/bin
+cp -a $CUR/gcc-dep/lib/*.a out/x86_64-w64-mingw32/lib
+cp -a $CUR/gcc-dep/lib/*.dll out/bin
 
 cd m_binutils; mkdir build; cd build
 
