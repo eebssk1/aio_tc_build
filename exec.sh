@@ -64,9 +64,6 @@ exec $CUR/mingw64.sh
 mingw64-legacy-cross)
 exec $CUR/mingw64.sh legacy
 ;;
-mingw64-legacy-super-cross)
-exec $CUR/mingw64.sh legacy_super
-;;
 mingw32-cross)
 echo this build is included in mingw64 as multilib/arch now !
 exit 0

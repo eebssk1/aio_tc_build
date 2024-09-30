@@ -8,17 +8,11 @@ export LD_LIBRARY_PATH=/opt/newcc/lib
 fi
 
 MLIB=1
-TAC=x86-64-v3
+TAC=ivybridge
 if [ "x$1" = "xlegacy" ]; then
 CFIX=_legacy
 CFIX2=-legacy
-TAC=ivybridge
-MLIB=0
-fi
-if [ "x$1" = "xlegacy_super" ]; then
-CFIX=_legacy_super
-CFIX2=-legacy_super
-TAC=core2
+TAC=westmere
 MLIB=0
 fi
 
@@ -53,15 +47,15 @@ echo current utc time 2 is $(date -u)
 cd $CUR
 
 cp -a mingw-crt/ucrt64$CFIX2/. out/x86_64-w64-mingw32/
-ln -s . out/x86_64-w64-mingw32/usr
+#ln -s . out/x86_64-w64-mingw32/usr
 
 if [ x$MLIB = x1 ]; then
 echo multilib enabled ~.
-MLPAR="--enable-multiarch --enable-multilib --with-arch-32=prescott --with-multilib-list=m32,m64 --with-abi=m64"
-mkdir -p out/x86_64-w64-mingw32/lib32
+MLPAR="--enable-multiarch --enable-multilib --with-arch-32=westmere --with-multilib-list=m32,m64 --with-abi=m64"
+mkdir -p out/x86_64-w64-mingw32/lib/32
+ln -s ./lib/32 out/x86_64-w64-mingw32/lib32
 cp -a mingw-crt/msvcrt32/lib/. out/x86_64-w64-mingw32/lib32/
 cp -a mingw-crt/msvcrt32/lib32/. out/x86_64-w64-mingw32/lib32/
-ln -s ../lib32 out/x86_64-w64-mingw32/lib/32
 else
 MLPAR="--disable-multiarch --disable-multilib"
 fi

@@ -29,7 +29,7 @@ jobs:
       TIME: ${{ needs.gen_tag.outputs.TIME }}
     strategy:
       matrix:
-        target: [linux-native, mingw64-win, mingw64-cross, mingw64-legacy-cross, arm64-cross, arm32-cross, mingw64-legacy-super-cross, musl-cross]
+        target: [linux-native, mingw64-win, mingw64-cross, mingw64-legacy-cross, arm64-cross, arm32-cross, musl-cross]
 
     steps:
       - name: checkout repo

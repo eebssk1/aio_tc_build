@@ -28,7 +28,7 @@ echo current utc time 1 is $(date -u)
 TMS=$(date +%s)
 
 mkdir -p out/x86_64-w64-mingw32
-cp -a mingw-crt/ucrt64-legacy/. out/x86_64-w64-mingw32/
+cp -a mingw-crt/ucrt64/. out/x86_64-w64-mingw32/
 mkdir out/x86_64-w64-mingw32/lib/32
 cp -a mingw-crt/msvcrt32/lib/.  out/x86_64-w64-mingw32/lib/32
 cp -a $CUR/gcc-dep/lib/*.a out/x86_64-w64-mingw32/lib
@@ -56,7 +56,7 @@ export CXXFLAGS_FOR_TARGET="$CFLAGS_FOR_TARGET"
 
 echo current utc time 3 is $(date -u)
 
-../configure --prefix=$CUR/out --host=x86_64-w64-mingw32 --target=x86_64-w64-mingw32 --program-prefix=x86_64-w64-mingw32- --enable-version-specific-runtime-libs --enable-checking=release --with-local-prefix=$CUR/out/x86_64-w64-mingw32/local  --with-arch=haswell --with-tune=icelake-client --with-gcc-major-version-only --with-default-libstdcxx-abi=new --disable-cet --disable-vtable-verify --enable-plugin  --enable-libatomic --enable-threads=posix --enable-graphite --enable-fully-dynamic-string --enable-libstdcxx-filesystem-ts --enable-libstdcxx-time --disable-libstdcxx-pch --enable-lto --enable-libgomp --enable-libssp --enable-default-ssp --disable-libvtv --enable-shared=libgcc,libgcov --enable-multiarch --enable-multilib --with-arch-32=prescott --with-multilib-list=m32,m64 --with-abi=m64 --disable-rpath --disable-nls --disable-werror --disable-symvers --disable-libstdcxx-debug --enable-languages=c,c++,lto --disable-sjlj-exceptions --with-specs-file="$CUR/mingw64.specs" || exit 255
+../configure --prefix=$CUR/out --host=x86_64-w64-mingw32 --target=x86_64-w64-mingw32 --program-prefix=x86_64-w64-mingw32- --enable-version-specific-runtime-libs --enable-checking=release --with-local-prefix=$CUR/out/x86_64-w64-mingw32/local  --with-arch=ivybridge --with-tune=icelake-client --with-gcc-major-version-only --with-default-libstdcxx-abi=new --disable-cet --disable-vtable-verify --enable-plugin  --enable-libatomic --enable-threads=posix --enable-graphite --enable-fully-dynamic-string --enable-libstdcxx-filesystem-ts --enable-libstdcxx-time --disable-libstdcxx-pch --enable-lto --enable-libgomp --enable-libssp --enable-default-ssp --disable-libvtv --enable-shared=libgcc,libgcov --enable-multiarch --enable-multilib --with-arch-32=prescott --with-multilib-list=m32,m64 --with-abi=m64 --disable-rpath --disable-nls --disable-werror --disable-symvers --disable-libstdcxx-debug --enable-languages=c,c++,lto --disable-sjlj-exceptions --with-specs-file="$CUR/mingw64.specs" || exit 255
 make -j$(($N+2)) all MAKEINFO=true || exit 255
 
 make -j install-strip MAKEINFO=true
