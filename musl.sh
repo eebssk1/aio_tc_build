@@ -23,6 +23,7 @@ export CXXFLAGS_FOR_TARGET="$CFLAGS_FOR_TARGET"
 mkdir -p out/x86_64-linux-musl
 tar -zxf musl_libc_amd64.tgz
 cp -a musl-libc/. out/x86_64-linux-musl/
+ln -s ./include out/x86_64-linux-musl/sys-include
 
 cd m_binutils; mkdir build; cd build
 
@@ -46,7 +47,7 @@ cd m_gcc; mkdir build; cd build
 
 echo current utc time 3 is $(date -u)
 
-../configure --host=x86_64-linux-gnu --build=x86_64-linux-gnu --target=x86_64-linux-musl --prefix=$CUR/out --enable-tls --disable-multilib --disable-multiarch --enable-version-specific-runtime-libs --enable-lto --disable-cet --disable-fixincludes --enable-libstdcxx-time=rt --disable-libstdcxx-debug --disable-libstdcxx-pch --enable-graphite --enable-__cxa_atexit --enable-threads --enable-languages=c,c++,lto --with-linker-hash-style=gnu --enable-gnu-indirect-function --enable-initfini-array --enable-gnu-unique-object --enable-plugin --enable-default-pie --enable-libssp --enable-default-ssp --with-gcc-major-version-only --enable-linker-build-id --with-default-libstdcxx-abi=new --enable-fully-dynamic-string --with-arch=ivybridge --with-tune=icelake-client --enable-checking=release --without-included-gettext --enable-clocale=gnu --with-system-zlib --disable-libsanitizer --enable-shared=libgcc,libstdc++,libgcov,libgomp --with-specs-file="$CUR/musl.specs" || exit 255
+../configure --host=x86_64-linux-gnu --build=x86_64-linux-gnu --target=x86_64-linux-musl --prefix=$CUR/out --enable-tls --disable-multilib --disable-multiarch --enable-version-specific-runtime-libs --enable-lto --disable-cet --disable-libvtv --disable-fixincludes --enable-libstdcxx-time=rt --disable-libstdcxx-debug --disable-libstdcxx-pch --enable-graphite --enable-__cxa_atexit --enable-threads --enable-languages=c,c++,lto --with-linker-hash-style=gnu --enable-gnu-indirect-function --enable-initfini-array --enable-gnu-unique-object --enable-plugin --enable-default-pie --enable-libssp --enable-default-ssp --with-gcc-major-version-only --enable-linker-build-id --with-default-libstdcxx-abi=new --enable-fully-dynamic-string --with-arch=ivybridge --with-tune=icelake-client --enable-checking=release --without-included-gettext --enable-clocale=gnu --with-system-zlib --disable-libsanitizer --enable-libgcov --enable-shared=libgcc,libstdc++,libgomp --with-specs-file="$CUR/musl.specs" || exit 255
 make -j$(($N+4)) || exit 255
 make -j install-strip MAKEINFO=true
 
@@ -58,6 +59,8 @@ TMT0=$((($TMM-$TMS)/60))
 TMT1=$((($TME-$TMM)/60))
 TMA=$(($TMT0+$TMT1))
 echo "part 1 took $TMT0 min, part 2 took $TMT1 min, which sum to $TMA min together!"
+
+rm out/x86_64-linux-musl/sys-include
 
 mv out x86_64-linux-musl
 tar -I 'bzip2 -9' -cf x86_64-linux-musl-cross.tb2 x86_64-linux-musl
