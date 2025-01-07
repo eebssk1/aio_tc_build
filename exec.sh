@@ -44,12 +44,15 @@ $CUR/pre.sh || exit 255
 chrt -b --pid 0 $$
 renice 3 $$
 
+
 echo Running Target script
 case "$1" in
 linux-native)
+export LEXLIB=-Wl,--push-state,-Bstatic,-lfl,--pop-state
 exec $CUR/native.sh
 ;;
 linux-native-profile)
+export LEXLIB=-Wl,--push-state,-Bstatic,-lfl,--pop-state
 exec $CUR/native.sh profile
 ;;
 mingw64-win)
@@ -59,9 +62,11 @@ mingw64-msys2)
 exec $CUR/mingw64-ms2.sh
 ;;
 mingw64-cross)
+export LEXLIB=-Wl,--push-state,-Bstatic,-lfl,--pop-state
 exec $CUR/mingw64.sh
 ;;
 mingw64-legacy-cross)
+export LEXLIB=-Wl,--push-state,-Bstatic,-lfl,--pop-state
 exec $CUR/mingw64.sh legacy
 ;;
 mingw32-cross)
@@ -69,12 +74,15 @@ echo this build is included in mingw64 as multilib/arch now !
 exit 0
 ;;
 arm64-cross)
+export LEXLIB=-Wl,--push-state,-Bstatic,-lfl,--pop-state
 exec $CUR/arm.sh 64
 ;;
 arm32-cross)
+export LEXLIB=-Wl,--push-state,-Bstatic,-lfl,--pop-state
 exec $CUR/arm.sh 32
 ;;
 musl-cross)
+export LEXLIB=-Wl,--push-state,-Bstatic,-lfl,--pop-state
 exec $CUR/musl.sh
 ;;
 *)
