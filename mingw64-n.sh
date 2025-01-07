@@ -17,7 +17,7 @@ export PATH=$CUR/x86_64-w64-mingw32-boot/bin:$PATH
 tar --bzip -xf gcc-dep.tb2
 rm gcc-dep.tb2
 
-export CFLAGS="-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=1 @$CUR/gccflags @$CUR/gccparam"
+export CFLAGS="-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=1 -march=ivybridge -mtune=broadwell @$CUR/gccflags @$CUR/gccparam"
 export CXXFLAGS="$CFLAGS"
 export LDFLAGS="-L$CUR/gcc-dep/lib @$CUR/ldflagsm"
 export CPPFLAGS="-I$CUR/gcc-dep/include"

@@ -15,7 +15,7 @@ export CFLAGS="-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=1 -flto-compression-level=7 -
 export CXXFLAGS="$CFLAGS"
 export LDFLAGS="-L/usr/local/lib @$CUR/ldflags"
 
-export CFLAGS_FOR_TARGET="-DPIC -fPIC -O3 -g1 -fgraphite -fgraphite-identity -flimit-function-alignment -flive-range-shrinkage -fsched-pressure -fsched-spec-load -fsched-stalled-insns=5 -fsched-stalled-insns-dep=8 -fgcse-las -fgcse-sm -fira-region=mixed -fschedule-insns -ftree-lrs -malign-data=cacheline -mrelax-cmpxchg-loop -ffunction-sections -fdata-sections  -march=ivybridge -mtune=icelake-client @$CUR/gccparam -Wno-error=maybe-uninitialized"
+export CFLAGS_FOR_TARGET="-DPIC -fPIC -O3 -g1 -fgraphite -fgraphite-identity -flimit-function-alignment -flive-range-shrinkage -fsched-pressure -fsched-spec-load -fsched-stalled-insns=5 -fsched-stalled-insns-dep=8 -fgcse-las -fgcse-sm -fira-region=mixed -fschedule-insns -ftree-lrs -falign-labels=8:6:4 -falign-functions=24 -falign-jumps=16:13:8 -falign-loops=16:13:8 -fmin-function-alignment=8 -malign-data=cacheline -mrelax-cmpxchg-loop -ffunction-sections -fdata-sections @$CUR/gccparam -Wno-error=maybe-uninitialized"
 export CXXFLAGS_FOR_TARGET="$CFLAGS_FOR_TARGET"
 
 export PATH=$CUR/out/bin:$PATH
@@ -66,7 +66,7 @@ if [ x$NO_LTO = x ]; then
 LTO="--with-build-config=bootstrap-lto$DED"
 fi
 
-../configure --host=x86_64-linux-gnu --build=x86_64-linux-gnu --target=x86_64-linux-gnu --prefix=/usr --enable-version-specific-runtime-libs --enable-lto --disable-cet --enable-multiarch --with-arch-32=westmere --enable-multilib --with-multilib-list=m32,m64,mx32 --with-abi=m64 --disable-fixincludes --enable-libstdcxx-time --disable-libstdcxx-debug --disable-libstdcxx-pch --enable-graphite --enable-__cxa_atexit --enable-threads --enable-languages=c,c++,lto --with-linker-hash-style=gnu --enable-gnu-indirect-function --enable-initfini-array --enable-gnu-unique-object --enable-plugin --enable-default-pie --with-gcc-major-version-only --enable-linker-build-id --with-default-libstdcxx-abi=new --enable-fully-dynamic-string --with-arch=ivybridge --with-tune=icelake-client --enable-checking=release --without-included-gettext --enable-clocale=gnu $LTO --with-system-zlib --enable-shared=libgcc,libgcov,libitm,libssp,libsanitizer --with-specs-file="$CUR/native.specs" || exit 255
+../configure --host=x86_64-linux-gnu --build=x86_64-linux-gnu --target=x86_64-linux-gnu --prefix=/usr --enable-version-specific-runtime-libs --enable-lto --disable-cet --enable-multiarch --with-arch-32=westmere --enable-multilib --with-multilib-list=m32,m64,mx32 --with-abi=m64 --disable-fixincludes --enable-libstdcxx-time --disable-libstdcxx-debug --disable-libstdcxx-pch --enable-graphite --enable-__cxa_atexit --enable-threads --enable-languages=c,c++,lto --with-linker-hash-style=gnu --enable-gnu-indirect-function --enable-initfini-array --enable-gnu-unique-object --enable-plugin --enable-default-pie --with-gcc-major-version-only --enable-linker-build-id --with-default-libstdcxx-abi=new --enable-fully-dynamic-string --with-arch=ivybridge --with-tune=broadwell --enable-checking=release --without-included-gettext --enable-clocale=gnu $LTO --with-system-zlib --enable-shared=libgcc,libgcov,libitm,libssp,libsanitizer --with-specs-file="$CUR/native.specs" || exit 255
 if [ "x$1" = "xprofile" ]; then
 make -j$(($N+4)) profiledbootstrap BOOT_CFLAGS="$CFLAGS" BOOT_CXXFLAGS="$CXXFLAGS" BOOT_LDFLAGS="$LDFLAGS" STAGE1_CFLAGS="$CFLAGS" STAGE1_CXXFLAGS="$CXXFLAGS" STAGE1_LDFLAGS="$LDFLAGS"  MAKEINFO=true || exit 255
 else

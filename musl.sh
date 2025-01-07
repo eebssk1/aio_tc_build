@@ -15,7 +15,7 @@ export CFLAGS="-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=1 -flto-compression-level=7 -
 export CXXFLAGS="$CFLAGS"
 export LDFLAGS="-L/usr/local/lib @$CUR/ldflags"
 
-export CFLAGS_FOR_TARGET="-DPIC -fPIC -O3 -g1 -fgraphite -fgraphite-identity -flive-range-shrinkage -fsched-pressure -fsched-spec-load -fsched-stalled-insns=10 -fsched-stalled-insns-dep=24 -fgcse-las -fgcse-sm -fira-region=mixed -fschedule-insns -ftree-lrs -malign-data=cacheline -mrelax-cmpxchg-loop -ffunction-sections -fdata-sections  -march=ivybridge -mtune=icelake-client @$CUR/gccparam -Wno-error=maybe-uninitialized"
+export CFLAGS_FOR_TARGET="-DPIC -fPIC -O3 -g1 -fgraphite -fgraphite-identity -flive-range-shrinkage -fsched-pressure -fsched-spec-load -fsched-stalled-insns=10 -fsched-stalled-insns-dep=24 -fgcse-las -fgcse-sm -fira-region=mixed -fschedule-insns -ftree-lrs -falign-labels=8:6:4 -flimit-function-alignment -falign-functions=24 -falign-jumps=16:13:8 -falign-loops=16:13:8 -fmin-function-alignment=8 -malign-data=cacheline -mrelax-cmpxchg-loop -ffunction-sections -fdata-sections  -march=ivybridge -mtune=broadwell @$CUR/gccparam -Wno-error=maybe-uninitialized"
 export CXXFLAGS_FOR_TARGET="$CFLAGS_FOR_TARGET"
 
 #export PATH=$CUR/out/bin:$PATH
@@ -47,7 +47,7 @@ cd m_gcc; mkdir build; cd build
 
 echo current utc time 3 is $(date -u)
 
-../configure --host=x86_64-linux-gnu --build=x86_64-linux-gnu --target=x86_64-linux-musl --prefix=$CUR/out --enable-tls --disable-multilib --disable-multiarch --enable-version-specific-runtime-libs --enable-lto --disable-cet --disable-libvtv --disable-fixincludes --enable-libstdcxx-time=rt --disable-libstdcxx-debug --disable-libstdcxx-pch --enable-graphite --enable-__cxa_atexit --enable-threads --enable-languages=c,c++,lto --with-linker-hash-style=gnu --enable-gnu-indirect-function --enable-initfini-array --enable-gnu-unique-object --enable-plugin --enable-default-pie --enable-libssp --enable-default-ssp --with-gcc-major-version-only --enable-linker-build-id --with-default-libstdcxx-abi=new --enable-fully-dynamic-string --with-arch=ivybridge --with-tune=icelake-client --enable-checking=release --without-included-gettext --enable-clocale=gnu --with-system-zlib --disable-libsanitizer --enable-libgcov --enable-shared=libgcc,libstdc++,libgomp --with-specs-file="$CUR/musl.specs" || exit 255
+../configure --host=x86_64-linux-gnu --build=x86_64-linux-gnu --target=x86_64-linux-musl --prefix=$CUR/out --enable-tls --disable-multilib --disable-multiarch --enable-version-specific-runtime-libs --enable-lto --disable-cet --disable-libvtv --disable-fixincludes --enable-libstdcxx-time=rt --disable-libstdcxx-debug --disable-libstdcxx-pch --enable-graphite --enable-__cxa_atexit --enable-threads --enable-languages=c,c++,lto --with-linker-hash-style=gnu --enable-gnu-indirect-function --enable-initfini-array --enable-gnu-unique-object --enable-plugin --enable-default-pie --enable-libssp --enable-default-ssp --with-gcc-major-version-only --enable-linker-build-id --with-default-libstdcxx-abi=new --enable-fully-dynamic-string --with-arch=ivybridge --with-tune=broadwell --enable-checking=release --without-included-gettext --enable-clocale=gnu --with-system-zlib --disable-libsanitizer --enable-libgcov --enable-shared=libgcc,libstdc++,libgomp --with-specs-file="$CUR/musl.specs" || exit 255
 make -j$(($N+4)) || exit 255
 make -j install-strip MAKEINFO=true
 
