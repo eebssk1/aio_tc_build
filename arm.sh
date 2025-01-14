@@ -51,6 +51,8 @@ TMM=$(date +%s)
 
 cd $CUR
 
+tar -zxf musl_libc_arm.tgz
+
 cp -a musl/$BIT/. out/$TARGET/
 ln -s . out/$TARGET/usr
 
