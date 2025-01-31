@@ -1,1 +1,0 @@
--O3 -g1 -fgraphite -fgraphite-identity -fipa-pta -flimit-function-alignment -fsched-pressure -fsched-spec-load -fsched-stalled-insns=6 -fsched-stalled-insns-dep=10 -fschedule-insns -ftree-cselim -ftree-lrs --param=lto-partitions=36 --param=lto-min-partition=11600 --param=lto-max-partition=560000

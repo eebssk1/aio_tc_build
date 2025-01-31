@@ -22,7 +22,7 @@ fi
 
 export PATH=$CUR/out/bin:$PATH
 
-export CFLAGS="-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=1 -I/usr/local/include  @$CUR/gccflags @$CUR/gccparam -flto-compression-level=7 -flto=2 -frandom-seed=1"
+export CFLAGS="-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=1 -I/usr/local/include  @$CUR/gccflags -flto-compression-level=1 -flto=2 -frandom-seed=1"
 export CXXFLAGS="$CFLAGS"
 export LDFLAGS="-L/usr/local/lib @$CUR/ldflags"
 export AR="gcc-ar"
@@ -63,9 +63,9 @@ fi
 cd m_gcc; mkdir build; cd build
 
 export lt_cv_deplibs_check_method='pass_all'
-export CPPFLAGS_FOR_TARGET="-DWIN32_LEAN_AND_MEAN -DCOM_NO_WINDOWS_H @$CUR/gccflagsm @$CUR/gccparam"
+export CPPFLAGS_FOR_TARGET="-DWIN32_LEAN_AND_MEAN -DCOM_NO_WINDOWS_H @$CUR/gccflags"
 export LDFLAGS_FOR_TARGET="@$CUR/ldflagsm"
-export CFLAGS_FOR_TARGET="-O3 -g1"
+export CFLAGS_FOR_TARGET="-ffunction-sections -fdata-sections"
 export CXXFLAGS_FOR_TARGET="$CFLAGS_FOR_TARGET"
 
 echo current utc time 3 is $(date -u)

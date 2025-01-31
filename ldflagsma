@@ -1,1 +1,0 @@
--Wl,-O3,--relax,--gc-sections,--sort-common=descending,--sort-section=name

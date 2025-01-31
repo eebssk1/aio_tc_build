@@ -17,7 +17,7 @@ export PATH=$CUR/x86_64-w64-mingw32-boot/bin:$PATH
 tar --bzip -xf gcc-dep.tb2
 rm gcc-dep.tb2
 
-export CFLAGS="-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=1 -march=ivybridge -mtune=broadwell @$CUR/gccflags @$CUR/gccparam"
+export CFLAGS="-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=1 @$CUR/gccflags"
 export CXXFLAGS="$CFLAGS"
 export LDFLAGS="-L$CUR/gcc-dep/lib @$CUR/ldflagsm"
 export CPPFLAGS="-I$CUR/gcc-dep/include"
@@ -51,9 +51,9 @@ cd $CUR
 cd m_gcc; mkdir build; cd build
 
 export lt_cv_deplibs_check_method='pass_all'
-export CPPFLAGS_FOR_TARGET="-DWIN32_LEAN_AND_MEAN -DCOM_NO_WINDOWS_H @$CUR/gccflagsm @$CUR/gccparam"
+export CPPFLAGS_FOR_TARGET="-DWIN32_LEAN_AND_MEAN -DCOM_NO_WINDOWS_H @$CUR/gccflags"
 export LDFLAGS_FOR_TARGET="@$CUR/ldflagsm"
-export CFLAGS_FOR_TARGET="-O3 -g1"
+export CFLAGS_FOR_TARGET="-ffunction-sections -fdata-sections"
 export CXXFLAGS_FOR_TARGET="$CFLAGS_FOR_TARGET"
 
 echo current utc time 3 is $(date -u)

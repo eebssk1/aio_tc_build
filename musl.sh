@@ -11,11 +11,11 @@ if [ "x$(which ccache)" != "x" ]; then
 export CC="ccache gcc" CXX="ccache g++"
 fi
 
-export CFLAGS="-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=1 -flto-compression-level=7 -fprofile-partial-training -flto=2 -frandom-seed=1 -I/usr/local/include  @$CUR/gccflags @$CUR/gccparam -Wno-error=maybe-uninitialized"
+export CFLAGS="-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=1 -flto-compression-level=1 -fprofile-partial-training -flto=2 -frandom-seed=1 -I/usr/local/include  @$CUR/gccflags -Wno-error=maybe-uninitialized"
 export CXXFLAGS="$CFLAGS"
 export LDFLAGS="-L/usr/local/lib @$CUR/ldflags"
 
-export CFLAGS_FOR_TARGET="-DPIC -fPIC -O3 -g1 -fgraphite -fgraphite-identity -flive-range-shrinkage -fsched-pressure -fsched-spec-load -fsched-stalled-insns=10 -fsched-stalled-insns-dep=24 -fgcse-las -fgcse-sm -fira-region=mixed -fschedule-insns -ftree-lrs -falign-labels=8:6:4 -flimit-function-alignment -falign-functions=24 -falign-jumps=16:13:8 -falign-loops=16:13:8 -fmin-function-alignment=8 -malign-data=cacheline -mrelax-cmpxchg-loop -ffunction-sections -fdata-sections  -march=ivybridge -mtune=broadwell @$CUR/gccparam -Wno-error=maybe-uninitialized"
+export CFLAGS_FOR_TARGET="-DPIC -fPIC -ffunction-sections -fdata-sections @$CUR/gccflags -Wno-error=maybe-uninitialized"
 export CXXFLAGS_FOR_TARGET="$CFLAGS_FOR_TARGET"
 
 #export PATH=$CUR/out/bin:$PATH
