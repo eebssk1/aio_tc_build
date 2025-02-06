@@ -6,4 +6,4 @@ if [ "$Where" = "/" ]; then
 Where=
 fi
 
-exec ${Where}x86_64-w64-mingw32-gcc-ar --target=pe-i386 "$@"
+exec ${Where}x86_64-w64-mingw32-gcc-ar "$@"
