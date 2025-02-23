@@ -25,7 +25,7 @@ cd m_binutils; mkdir build; cd build
 echo current utc time 1 is $(date -u)
 TMS=$(date +%s)
 
-../configure --target=x86_64-linux-gnu --prefix=/usr --enable-gold --enable-pgo-build=lto --enable-nls --enable-plugins --enable-multilib --enable-compressed-debug-sections=all --enable-checking=release --enable-new-dtags --disable-gprofng --with-system-zlib --with-zstd || exit 255
+../configure --target=x86_64-linux-gnu --prefix=/usr --enable-pgo-build=lto --enable-nls --enable-plugins --enable-multilib --enable-compressed-debug-sections=all --enable-checking=release --enable-new-dtags --disable-gprofng --with-system-zlib --with-zstd || exit 255
 make -j$(($N+4)) all MAKEINFO=true || exit 255
 
 make -j install-strip DESTDIR=$CUR/tmp MAKEINFO=true
@@ -52,8 +52,6 @@ fi
 done
 
 cd m_gcc; mkdir build; cd build
-
-export FORCE_GOLD=1
 
 echo current utc time 3 is $(date -u)
 

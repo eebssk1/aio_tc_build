@@ -30,7 +30,7 @@ cd m_binutils; mkdir build; cd build
 echo current utc time 1 is $(date -u)
 TMS=$(date +%s)
 
-../configure --target=x86_64-linux-musl --prefix=$CUR/out --enable-gold --enable-nls --enable-plugins --enable-compressed-debug-sections=all --enable-checking=release --enable-deterministic-archives --enable-new-dtags --disable-gprofng --with-system-zlib --with-zstd || exit 255
+../configure --target=x86_64-linux-musl --prefix=$CUR/out --enable-nls --enable-plugins --enable-compressed-debug-sections=all --enable-checking=release --enable-deterministic-archives --enable-new-dtags --disable-gprofng --with-system-zlib --with-zstd || exit 255
 make -j$(($N+4)) all MAKEINFO=true || exit 255
 
 make -j install-strip MAKEINFO=true

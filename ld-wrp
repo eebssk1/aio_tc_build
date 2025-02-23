@@ -12,7 +12,12 @@ echo "$CTT" >&2
 fi
 
 if [ "x$FORCE_GOLD" != "x" ]; then
+if [ "x$(which $0.gold)" != "x" ] || [ -x $0.gold ];
+then
 exec $0.gold $@
+else
+echo "$0.gold NOT AVAILABLE !" >&2
+fi
 fi
 
 exec $0.bfd $@
