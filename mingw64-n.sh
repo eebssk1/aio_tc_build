@@ -36,6 +36,7 @@ mkdir -p out/x86_64-w64-mingw32/lib/32/bin
 cp -a mingw-crt/msvcrt32/lib/.  out/x86_64-w64-mingw32/lib/32
 cp -a mingw-crt/msvcrt32/bin/.  out/x86_64-w64-mingw32/lib/32/bin
 cp -a $CUR/gcc-dep/lib/*.a out/x86_64-w64-mingw32/lib
+mkdir out/bin
 cp -a $CUR/gcc-dep/lib/*.dll out/bin
 
 ln -s ./include out/x86_64-w64-mingw32/sys-include
