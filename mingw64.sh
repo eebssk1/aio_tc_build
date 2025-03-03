@@ -52,10 +52,10 @@ ln -s ./include out/x86_64-w64-mingw32/sys-include
 if [ x$MLIB = x1 ]; then
 echo multilib enabled ~.
 MLPAR="--enable-multiarch --enable-multilib --with-arch-32=westmere --with-multilib-list=m32,m64 --with-abi=m64"
-mkdir -p out/x86_64-w64-mingw32/lib/32
+mkdir -p out/x86_64-w64-mingw32/lib/32/bin
 ln -s ./lib/32 out/x86_64-w64-mingw32/lib32
 cp -a mingw-crt/msvcrt32/lib/. out/x86_64-w64-mingw32/lib32/
-cp -a mingw-crt/msvcrt32/lib32/. out/x86_64-w64-mingw32/lib32/
+cp -a mingw-crt/msvcrt32/bin/. out/x86_64-w64-mingw32/lib32/bin
 else
 MLPAR="--disable-multiarch --disable-multilib"
 fi
