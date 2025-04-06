@@ -6,7 +6,7 @@ if [ "x$(which ccache)" != "x" ]; then
 export CC="ccache gcc" CXX="ccache g++"
 fi
 
-export CFLAGS="-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=1 -march=ivybridge -mtune=broadwell @$CUR/gccflags @$CUR/gccparam"
+export CFLAGS="-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=1 -march=ivybridge -mtune=broadwell @$CUR/gccflags"
 export CXXFLAGS="$CFLAGS"
 export LDFLAGS="@$CUR/ldflagsm"
 
