@@ -1,9 +1,1 @@
-#!/bin/sh
-
-Where="$(dirname $(readlink -f $0))/"
-
-if [ "$Where" = "/" ]; then
-Where=
-fi
-
-exec ${Where}x86_64-w64-mingw32-gcc-ar "$@"
+x86_64-w64-mingw32-gcc-ar

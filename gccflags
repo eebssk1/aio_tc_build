@@ -1,1 +1,1 @@
--O3 -g1 -D__1ENABLE_AGGRESSIVE_GRAPHITE9__ -flimit-function-alignment -fgcse-las -falign-labels=8:6:4 -falign-functions=24 -fmin-function-alignment=8
+-O3 -g1 -D__1ENABLE_AGGRESSIVE_GRAPHITE9__ -flimit-function-alignment -fgcse-las -fgcse-sm -falign-labels=8:7:4 -falign-functions=24:18 -fmin-function-alignment=16
