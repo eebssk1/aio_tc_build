@@ -41,6 +41,10 @@ mv x86_64-linux-gnu /opt/newcc
 fi
 fi
 
+if [ "$MG" = "1" ]; then
+git clone https://git.code.sf.net/p/mingw-w64/mingw-w64 -b master --depth=1 mingw-w64-mingw-w64 || exit 255
+fi
+
 rm -rf m_*/build
 rm -rf out
 rm -rf *cross*.tb2 *native*.tb2

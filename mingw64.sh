@@ -8,7 +8,7 @@ export LD_LIBRARY_PATH=/opt/newcc/lib
 fi
 
 MLIB=1
-TAC=ivybridge
+TAC=haswell
 if [ "x$1" = "xlegacy" ]; then
 CFIX=_legacy
 CFIX2=-legacy
@@ -34,6 +34,14 @@ curl -L "https://github.com/eebssk1/mingw-crt-build/releases/latest/download/min
 echo current utc time 1 is $(date -u)
 TMS=$(date +%s)
 
+cd mingw-w64-mingw-w64; mkdir build; cd build
+
+../configure --without-headers --without-crt --with-tools=all --prefix=$CUR/out || exit 255
+make -j$(($N+3)) all MAKEINFO=true || exit 255
+make -j install-strip MAKEINFO=true
+
+cd $CUR
+
 cd m_binutils; mkdir build; cd build
 
 ../configure --prefix=$CUR/out --target=x86_64-w64-mingw32 --enable-64-bit-bfd --enable-checking=release --enable-nls --disable-rpath --enable-install-libiberty --enable-plugins --enable-deterministic-archives --disable-werror --enable-lto --with-system-zlib --with-zstd --disable-gdb --disable-gprof --disable-gprofng || exit 255
@@ -51,7 +59,7 @@ ln -s ./include out/x86_64-w64-mingw32/sys-include
 
 if [ x$MLIB = x1 ]; then
 echo multilib enabled ~.
-MLPAR="--enable-multiarch --enable-multilib --with-arch-32=westmere --with-multilib-list=m32,m64 --with-abi=m64"
+MLPAR="--enable-multiarch --enable-multilib --with-arch-32=haswell --with-multilib-list=m32,m64 --with-abi=m64"
 mkdir -p out/x86_64-w64-mingw32/lib/32/bin
 ln -s ./lib/32 out/x86_64-w64-mingw32/lib32
 cp -a mingw-crt/msvcrt32/lib/. out/x86_64-w64-mingw32/lib32/
@@ -70,7 +78,7 @@ export CXXFLAGS_FOR_TARGET="$CFLAGS_FOR_TARGET"
 
 echo current utc time 3 is $(date -u)
 
-../configure --prefix=$CUR/out --target=x86_64-w64-mingw32 --enable-version-specific-runtime-libs --enable-checking=release --with-local-prefix=$CUR/out/x86_64-w64-mingw32/local  --with-arch=$TAC --with-tune=icelake-client --with-gcc-major-version-only --with-default-libstdcxx-abi=new --disable-cet --disable-vtable-verify --enable-plugin  --enable-libatomic --enable-threads=posix --enable-graphite --enable-fully-dynamic-string --enable-libstdcxx-filesystem-ts --enable-libstdcxx-time --disable-libstdcxx-pch --enable-lto --enable-libgomp --disable-libssp --enable-shared=libgcc,libstdc++,libgomp,libatomic $MLPAR --disable-rpath --enable-nls --disable-werror --disable-symvers --disable-libstdcxx-debug --enable-languages=c,c++,lto --disable-sjlj-exceptions --with-specs-file="$CUR/mingw64.specs" || exit 255
+../configure --prefix=$CUR/out --target=x86_64-w64-mingw32 --enable-version-specific-runtime-libs --enable-checking=release --with-local-prefix=$CUR/out/x86_64-w64-mingw32/local  --with-arch=$TAC --with-tune=skylake --with-gcc-major-version-only --with-default-libstdcxx-abi=new --disable-cet --disable-vtable-verify --enable-plugin  --enable-libatomic --enable-threads=posix --enable-graphite --enable-fully-dynamic-string --enable-libstdcxx-filesystem-ts --enable-libstdcxx-time --disable-libstdcxx-pch --enable-lto --enable-libgomp --disable-libssp --enable-shared=libgcc,libstdc++,libgomp,libatomic $MLPAR --disable-rpath --enable-nls --disable-werror --disable-symvers --disable-libstdcxx-debug --enable-languages=c,c++,lto --disable-sjlj-exceptions --with-specs-file="$CUR/mingw64.specs" || exit 255
 make -j$(($N+2)) all MAKEINFO=true || exit 255
 
 make -j install-strip MAKEINFO=true

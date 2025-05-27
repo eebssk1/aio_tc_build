@@ -38,6 +38,13 @@ if [ -e /usr/lib/x86_64-linux-gnu/libtcmalloc_minimal.so.4 ]; then
 export LD_PRELOAD=libtcmalloc_minimal.so.4
 fi
 
+
+case "$1" in
+mingw*)
+export MG=1
+;;
+esac
+
 echo Running PRE script
 $CUR/pre.sh || exit 255
 

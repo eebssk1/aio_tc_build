@@ -16,6 +16,14 @@ curl -L "https://github.com/eebssk1/mingw-crt-build/releases/latest/download/min
 echo current utc time 1 is $(date -u)
 TMS=$(date +%s)
 
+cd mingw-w64-mingw-w64; mkdir build; cd build
+
+../configure --without-headers --without-crt --with-tools=all --prefix=$CUR/out || exit 255
+make -j$(($N+3)) all MAKEINFO=true || exit 255
+make -j install-strip MAKEINFO=true
+
+cd $CUR
+
 cd m_binutils; mkdir build; cd build
 
 ../configure --prefix=${MINGW_PREFIX} --target=x86_64-w64-mingw32 --enable-64-bit-bfd --enable-checking=release --disable-multilib --disable-nls --disable-rpath --with-libiconv-prefix=${MINGW_PREFIX} --with-sysroot=${MINGW_PREFIX} --enable-install-libiberty --enable-plugins --enable-deterministic-archives --disable-werror --enable-lto --with-system-zlib --with-zstd --disable-gdb --disable-gprof --disable-gprofng || exit 255
@@ -45,7 +53,7 @@ export CXXFLAGS_FOR_TARGET="$CFLAGS_FOR_TARGET"
 
 echo current utc time 3 is $(date -u)
 
-../configure --prefix=$CUR/out --target=x86_64-w64-mingw32 --enable-bootstrap --with-build-config=bootstrap-O3 --enable-version-specific-runtime-libs --enable-checking=release --with-local-prefix=$CUR/out/x86_64-w64-mingw32/local --with-native-system-header-dir=/ucrt64/include --with-arch=ivybridge --with-tune=icelake-client --with-gcc-major-version-only --with-default-libstdcxx-abi=new --disable-cet --disable-vtable-verify --enable-plugin  --with-system-zlib --enable-libatomic --enable-threads=posix --enable-graphite --enable-fully-dynamic-string --enable-libstdcxx-filesystem-ts --enable-libstdcxx-time --disable-libstdcxx-pch --enable-lto --enable-libgomp --disable-libssp --disable-libvtv --enable-shared=libgcc,libstdc++,libgomp,libatomic --disable-multiarch --disable-multilib --disable-rpath --disable-nls --disable-werror --disable-symvers --disable-libstdcxx-debug --disable-win32-registry --enable-languages=c,c++,lto --disable-sjlj-exceptions --with-specs-file="$CUR/mingw64.specs" || exit 255
+../configure --prefix=$CUR/out --target=x86_64-w64-mingw32 --enable-bootstrap --with-build-config=bootstrap-O3 --enable-version-specific-runtime-libs --enable-checking=release --with-local-prefix=$CUR/out/x86_64-w64-mingw32/local --with-native-system-header-dir=/ucrt64/include --with-arch=haswell --with-tune=skylake --with-gcc-major-version-only --with-default-libstdcxx-abi=new --disable-cet --disable-vtable-verify --enable-plugin  --with-system-zlib --enable-libatomic --enable-threads=posix --enable-graphite --enable-fully-dynamic-string --enable-libstdcxx-filesystem-ts --enable-libstdcxx-time --disable-libstdcxx-pch --enable-lto --enable-libgomp --disable-libssp --disable-libvtv --enable-shared=libgcc,libstdc++,libgomp,libatomic --disable-multiarch --disable-multilib --disable-rpath --disable-nls --disable-werror --disable-symvers --disable-libstdcxx-debug --disable-win32-registry --enable-languages=c,c++,lto --disable-sjlj-exceptions --with-specs-file="$CUR/mingw64.specs" || exit 255
 make -j$(($N+3)) bootstrap STAGE1_CFLAGS="-g1 -Os" MAKEINFO=true || exit 255
 make -j$(($N+3)) all MAKEINFO=true || exit 255
 
