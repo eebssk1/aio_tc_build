@@ -62,6 +62,10 @@ linux-native-profile)
 export LEXLIB=-Wl,--push-state,-Bstatic,-lfl,--pop-state
 exec $CUR/native.sh profile
 ;;
+linux-native-legacy)
+export LEXLIB=-Wl,--push-state,-Bstatic,-lfl,--pop-state
+exec $CUR/native_l.sh
+;;
 mingw64-win)
 exec $CUR/mingw64-n.sh
 ;;

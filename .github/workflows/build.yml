@@ -29,7 +29,7 @@ jobs:
       TIME: ${{ needs.gen_tag.outputs.TIME }}
     strategy:
       matrix:
-        target: [linux-native, mingw64-win, mingw64-cross, mingw64-legacy-cross, arm64-cross, arm32-cross, musl-cross]
+        target: [linux-native, linux-native-legacy, mingw64-win, mingw64-cross, mingw64-legacy-cross, arm64-cross, arm32-cross, musl-cross]
 
     steps:
       - name: checkout repo
@@ -79,7 +79,7 @@ jobs:
         uses: ncipollo/release-action@v1.14.0
         with:
           allowUpdates: true
-          artifacts: "*native.tb2,*cross*.tb2,conflogs*.tgz,onelog.txt,stdout_*.log"
+          artifacts: "*native.tb2,*native_*.tb2,*cross*.tb2,conflogs*.tgz,onelog.txt,stdout_*.log"
           commit: main
           makeLatest: true
           tag: ${{ env.TAG }}
@@ -132,7 +132,7 @@ jobs:
         uses: ncipollo/release-action@v1.14.0
         with:
           allowUpdates: true
-          artifacts: "*native.tb2,*cross*.tb2,conflogs*.tgz,onelog.txt,stdout_*.log"
+          artifacts: "*native.tb2,*native_*.tb2,*cross*.tb2,conflogs*.tgz,onelog.txt,stdout_*.log"
           commit: main
           makeLatest: true
           tag: ${{ env.TAG }}
