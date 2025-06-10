@@ -28,8 +28,9 @@ jobs:
       TAG: ${{ needs.gen_tag.outputs.TAG }}
       TIME: ${{ needs.gen_tag.outputs.TIME }}
     strategy:
+      fail-fast: false
       matrix:
-        target: [linux-native, linux-native-legacy, mingw64-win, mingw64-cross, mingw64-legacy-cross, arm64-cross, arm32-cross, musl-cross]
+        target: [linux-native, linux-native-legacy, mingw64-win, mingw64-win-ms, mingw64-cross, mingw64-cross-ms, mingw64-legacy-cross, mingw64-legacy-cross-ms, arm64-cross, arm32-cross, musl-cross]
 
     steps:
       - name: checkout repo
@@ -93,37 +94,46 @@ jobs:
       TAG: ${{ needs.gen_tag.outputs.TAG }}
       TIME: ${{ needs.gen_tag.outputs.TIME }}
       NO_TC_DOWN: 1
-    defaults:
-      run:
-        shell: msys2 {0}
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [mingw64-msys2, mingw64-msys2-ms]
+        include:
+          - target: mingw64-msys2
+            msystem: UCRT64
+          - target: mingw64-msys2-ms
+            msystem: MINGW64
     steps:
       - name: setup msys2
         uses: msys2/setup-msys2@v2
         with:
-          msystem: UCRT64
-          install: mingw-w64-ucrt-x86_64-toolchain python git gmp-devel mpfr-devel mpc-devel isl-devel zlib-devel libzstd-devel bison flex diffutils make
+          msystem: MSYS
+          install: mingw-w64-ucrt-x86_64-toolchain mingw-w64-x86_64-toolchain python git gmp-devel mpfr-devel mpc-devel isl-devel zlib-devel libzstd-devel bison flex diffutils make
           update: true
           release: false
       - run: git config --global core.autocrlf input
       - name: checkout
         uses: actions/checkout@v4
       - name: build
-        run: exec ./exec.sh mingw64-msys2
+        env:
+          MSYSTEM: ${{ matrix.msystem }}
+        run: msys2 -c 'exec ./exec.sh ${{ matrix.target }}'
       - name: upload result
         uses: actions/upload-artifact@v4
         with:
-          name: result_mingw64-msys2
+          name: result_${{ matrix.target }}
           path: |
             ./*native.tb2
             ./*cross*.tb2
       - name: collect config log
         if: (!cancelled())
+        shell: msys2 {0}
         run: exec ./logtar.sh
       - name: upload debug output
         if: (!cancelled())
         uses: actions/upload-artifact@v4
         with:
-          name: debug_mingw64-msys2
+          name: debug_${{ matrix.target }}
           path: |
             ./conflogs*.tgz
             ./curouts*.tgz

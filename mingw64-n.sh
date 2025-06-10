@@ -27,14 +27,18 @@ curl -L "https://github.com/eebssk1/mingw-crt-build/releases/latest/download/min
 echo current utc time 1 is $(date -u)
 TMS=$(date +%s)
 
-cp -rf mingw-crt/ucrt64/lib/* $CUR/x86_64-w64-mingw32-boot/x86_64-w64-mingw32/lib/
-cp -rf mingw-crt/msvcrt32/lib/* $CUR/x86_64-w64-mingw32-boot/x86_64-w64-mingw32/lib/32/
+if [ "x$MS" != "x" ]; then
+SUF="_ms"
+fi
+
+cp -rf mingw-crt/ucrt64$SUF/lib/* $CUR/x86_64-w64-mingw32-boot/x86_64-w64-mingw32/lib/
+cp -rf mingw-crt/msvcrt32$SUF/lib/* $CUR/x86_64-w64-mingw32-boot/x86_64-w64-mingw32/lib/32/
 
 mkdir -p out/x86_64-w64-mingw32
-cp -a mingw-crt/ucrt64/. out/x86_64-w64-mingw32/
+cp -a mingw-crt/ucrt64$SUF/. out/x86_64-w64-mingw32/
 mkdir -p out/x86_64-w64-mingw32/lib/32/bin
-cp -a mingw-crt/msvcrt32/lib/.  out/x86_64-w64-mingw32/lib/32
-cp -a mingw-crt/msvcrt32/bin/.  out/x86_64-w64-mingw32/lib/32/bin
+cp -a mingw-crt/msvcrt32$SUF/lib/.  out/x86_64-w64-mingw32/lib/32
+cp -a mingw-crt/msvcrt32$SUF/bin/.  out/x86_64-w64-mingw32/lib/32/bin
 cp -a $CUR/gcc-dep/lib/*.a out/x86_64-w64-mingw32/lib
 mkdir out/bin
 cp -a $CUR/gcc-dep/lib/*.dll out/bin
@@ -88,6 +92,6 @@ cd $CUR
 
 rm out/x86_64-w64-mingw32/sys-include
 
-mv out x86_64-w64-mingw32-indep
-tar -hI 'bzip2 -9' -cf x86_64-w64-mingw32-cross_indep.tb2 x86_64-w64-mingw32-indep
+mv out x86_64-w64-mingw32-indep$SUF
+tar -hI 'bzip2 -9' -cf x86_64-w64-mingw32-cross_indep$SUF.tb2 x86_64-w64-mingw32-indep$SUF
 exit 0
