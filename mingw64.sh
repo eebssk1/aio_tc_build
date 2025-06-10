@@ -54,7 +54,11 @@ echo current utc time 2 is $(date -u)
 
 cd $CUR
 
-cp -a mingw-crt/ucrt64$CFIX2/. out/x86_64-w64-mingw32/
+if [ "x$MS" != "x" ]; then
+SUF="_ms"
+fi
+
+cp -a mingw-crt/ucrt64$CFIX2$SUF/. out/x86_64-w64-mingw32/
 ln -s ./include out/x86_64-w64-mingw32/sys-include
 
 if [ x$MLIB = x1 ]; then
@@ -99,6 +103,6 @@ fi
 
 rm out/x86_64-w64-mingw32/sys-include
 
-mv out x86_64-w64$CFIX-mingw32
-tar -I 'bzip2 -9' -cf x86_64-w64$CFIX-mingw32-cross.tb2 x86_64-w64$CFIX-mingw32
+mv out x86_64-w64$CFIX-mingw32$SUF
+tar -I 'bzip2 -9' -cf x86_64-w64$CFIX-mingw32-cross$SUF.tb2 x86_64-w64$CFIX-mingw32$SUF
 ln -s x86_64-w64$CFIX-mingw32 out || exit 0

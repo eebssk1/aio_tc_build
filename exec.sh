@@ -69,14 +69,32 @@ exec $CUR/native_l.sh
 mingw64-win)
 exec $CUR/mingw64-n.sh
 ;;
+mingw64-win-ms)
+export MS=1
+exec $CUR/mingw64-n.sh
+;;
 mingw64-msys2)
+exec $CUR/mingw64-ms2.sh
+;;
+mingw64-msys2-ms)
+export MS=1
 exec $CUR/mingw64-ms2.sh
 ;;
 mingw64-cross)
 export LEXLIB=-Wl,--push-state,-Bstatic,-lfl,--pop-state
 exec $CUR/mingw64.sh
 ;;
+mingw64-cross-ms)
+export MS=1
+export LEXLIB=-Wl,--push-state,-Bstatic,-lfl,--pop-state
+exec $CUR/mingw64.sh
+;;
 mingw64-legacy-cross)
+export LEXLIB=-Wl,--push-state,-Bstatic,-lfl,--pop-state
+exec $CUR/mingw64.sh legacy
+;;
+mingw64-legacy-cross-ms)
+export MS=1
 export LEXLIB=-Wl,--push-state,-Bstatic,-lfl,--pop-state
 exec $CUR/mingw64.sh legacy
 ;;
