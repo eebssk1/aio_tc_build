@@ -45,9 +45,14 @@ if [ "x$MS" != "x" ]; then
 SUF="_ms"
 fi
 
+mv mingw-crt/ucrt64${SUF}/bin/*.dll mingw-crt/ucrt64${SUF}/lib*/ || true
 cp -a mingw-crt/ucrt64${SUF}/. out/x86_64-w64-mingw32/
 
 cd m_gcc; mkdir build; cd build
+
+MINGW_NATIVE_PREFIX=$(cygpath -am ${MINGW_PREFIX})
+
+sed -i "s#\\\\mingw\\\\#${MINGW_NATIVE_PREFIX//\//\\\\}#g" gcc/config/i386/mingw32.h
 
 export lt_cv_deplibs_check_method='pass_all'
 export CPPFLAGS_FOR_TARGET="-DWIN32_LEAN_AND_MEAN -DCOM_NO_WINDOWS_H @$CUR/gccflags"
@@ -57,7 +62,7 @@ export CXXFLAGS_FOR_TARGET="$CFLAGS_FOR_TARGET"
 
 echo current utc time 3 is $(date -u)
 
-../configure --prefix=$CUR/out --target=x86_64-w64-mingw32 --enable-bootstrap --with-build-config=bootstrap-O3 --enable-version-specific-runtime-libs --enable-checking=release --with-local-prefix=$CUR/out/x86_64-w64-mingw32/local --with-native-system-header-dir=/${msystem}/include --with-arch=haswell --with-tune=skylake --with-gcc-major-version-only --with-default-libstdcxx-abi=new --disable-cet --disable-vtable-verify --enable-plugin  --with-system-zlib --enable-libatomic --enable-threads=posix --enable-graphite --enable-fully-dynamic-string --enable-libstdcxx-filesystem-ts --enable-libstdcxx-time --disable-libstdcxx-pch --enable-lto --enable-libgomp --disable-libssp --disable-libvtv --enable-shared=libgcc,libstdc++,libgomp,libatomic --disable-multiarch --disable-multilib --disable-rpath --disable-nls --disable-werror --disable-symvers --disable-libstdcxx-debug --disable-win32-registry --enable-languages=c,c++,lto --disable-sjlj-exceptions --with-specs-file="$CUR/mingw64.specs" || exit 255
+../configure --prefix=$CUR/out --target=x86_64-w64-mingw32 --enable-bootstrap --with-build-config=bootstrap-O3 --enable-version-specific-runtime-libs --enable-checking=release --with-local-prefix=$CUR/out/x86_64-w64-mingw32/local --with-native-system-header-dir=${MINGW_PREFIX}/include --with-arch=haswell --with-tune=skylake --with-gcc-major-version-only --with-default-libstdcxx-abi=new --disable-cet --disable-vtable-verify --enable-plugin  --with-system-zlib --enable-libatomic --enable-threads=posix --enable-graphite --enable-fully-dynamic-string --enable-libstdcxx-filesystem-ts --enable-libstdcxx-time --disable-libstdcxx-pch --enable-lto --enable-libgomp --disable-libssp --disable-libvtv --enable-shared=libgcc,libstdc++,libgomp,libatomic --disable-multiarch --disable-multilib --disable-rpath --disable-nls --disable-werror --disable-symvers --disable-libstdcxx-debug --disable-win32-registry --enable-languages=c,c++,lto --disable-sjlj-exceptions --with-specs-file="$CUR/mingw64.specs" || exit 255
 make -j$(($N+3)) bootstrap STAGE1_CFLAGS="-g1 -Os" MAKEINFO=true || exit 255
 make -j$(($N+3)) all MAKEINFO=true || exit 255
 
