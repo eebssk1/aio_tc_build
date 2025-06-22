@@ -77,7 +77,7 @@ jobs:
             ./curouts*.tgz
             ./stdout_*.log
       - name: release
-        uses: ncipollo/release-action@v1.14.0
+        uses: ncipollo/release-action@v1.16.0
         with:
           allowUpdates: true
           artifacts: "*native.tb2,*native_*.tb2,*cross*.tb2,conflogs*.tgz,onelog.txt,stdout_*.log"
@@ -86,6 +86,7 @@ jobs:
           tag: ${{ env.TAG }}
           name: ${{ env.TAG }}_${{ env.TIME }}
           bodyFile: notes.txt
+          omitBodyDuringUpdate: true
 
   build-msys:
     runs-on: windows-latest
@@ -139,11 +140,12 @@ jobs:
             ./curouts*.tgz
             ./stdout_*.log
       - name: release
-        uses: ncipollo/release-action@v1.14.0
+        uses: ncipollo/release-action@v1.16.0
         with:
           allowUpdates: true
           artifacts: "*native.tb2,*native_*.tb2,*cross*.tb2,conflogs*.tgz,onelog.txt,stdout_*.log"
           commit: main
           makeLatest: true
+          omitBodyDuringUpdate: true
           tag: ${{ env.TAG }}
           name: ${{ env.TAG }}_${{ env.TIME }}
