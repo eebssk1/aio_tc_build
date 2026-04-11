@@ -4,7 +4,19 @@ on:
   push:
     branches: [ "main" ]
   workflow_dispatch:
-
+    inputs:
+      use_sys_tc:
+        description: 'Use System Toolchain'
+        type: boolean
+        default: false
+      disable_native_lto:
+        description: 'Disable LTOed bootstrap'
+        type: boolean
+        default: false
+      use_verbose_ld_super:
+        description: 'Enable LD verbose'
+        type: boolean
+        default: false
 jobs:
   gen_tag:
     runs-on: ubuntu-latest
@@ -27,6 +39,7 @@ jobs:
     env:
       TAG: ${{ needs.gen_tag.outputs.TAG }}
       TIME: ${{ needs.gen_tag.outputs.TIME }}
+      SYS_TC: ${{ inputs.use_sys_tc }}
     strategy:
       fail-fast: false
       matrix:
@@ -54,7 +67,15 @@ jobs:
           max-size: "1872M"
           key: t_${{ matrix.target }}
       - name: build
-        run: exec stdbuf -oL ./exec.sh ${{ matrix.target }}
+        run: |
+          if [ "${{ inputs.use_verbose_ld_super }}" = "true" ]; then
+            export VERBOSE_LD_SUPER=1
+            export VERBOSE_LD=1
+          fi
+          if [ "${{ inputs.disable_native_lto }}" = "true" ]; then
+            export NO_LTO=1
+          fi
+          exec stdbuf -oL ./exec.sh ${{ matrix.target }}
       - name: log rename
         run: mv out.log stdout_${{ matrix.target }}.log || true
       - name: collect config log

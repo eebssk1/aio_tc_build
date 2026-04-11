@@ -23,7 +23,7 @@ if [ ! -e m_gcc ]; then
 git clone --single-branch --depth=1 https://github.com/eebssk1/m_gcc || exit 255
 fi
 
-if [ ! -e m_gcc ] && [ ! -e m_binutils ]; then
+if [ ! -e m_gcc ] || [ ! -e m_binutils ]; then
 echo Unkown Error !; exit 255
 fi
 
@@ -32,7 +32,7 @@ echo "GCC: $(cd m_gcc; git log --no-decorate -1 --oneline)" >> notes.txt
 echo "BinUtils: $(cd m_binutils; git log --no-decorate -1 --oneline)" >> notes.txt
 
 
-if [ -e x86_64-linux-gnu ]; then
+if [ -e x86_64-linux-gnu ] || [ "$SYS_TC" = "true" ]; then
 echo "Hmm? Huh!"
 else
 if [ x$NO_TC_DOWN = x ] && ( [ ! -e /opt/newcc ] || [ ! -e ~/x86_64-linux-gnu ] ); then

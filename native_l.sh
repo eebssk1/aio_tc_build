@@ -11,12 +11,13 @@ if [ "x$(which ccache)" != "x" ]; then
 export CC="ccache gcc" CXX="ccache g++"
 fi
 
-export CFLAGS="-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=1 -I/usr/local/include  @$CUR/gccflags -Wno-error=maybe-uninitialized"
+export CFLAGS="-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=1 -D__BUILD_NO_CON__ -I/usr/local/include  @$CUR/gccflags -Wno-error=maybe-uninitialized"
 export CXXFLAGS="$CFLAGS"
 export LDFLAGS="-L/usr/local/lib @$CUR/ldflags"
 
-export CFLAGS_FOR_TARGET="-DPIC -fPIC -ffunction-sections -fdata-sections @$CUR/gccflags -Wno-error=maybe-uninitialized"
+export CFLAGS_FOR_TARGET="-D__BUILD_NO_CON__ -ffunction-sections -fdata-sections @$CUR/gccflags -Wno-error=maybe-uninitialized"
 export CXXFLAGS_FOR_TARGET="$CFLAGS_FOR_TARGET"
+export LDFLAGS_FOR_TARGET="@$CUR/ldflags"
 
 export PATH=$CUR/out/bin:$PATH
 
@@ -55,8 +56,8 @@ cd m_gcc; mkdir build; cd build
 
 echo current utc time 3 is $(date -u)
 
-../configure --host=x86_64-linux-gnu --build=x86_64-linux-gnu --target=x86_64-linux-gnu --prefix=/usr --enable-version-specific-runtime-libs --enable-lto --disable-cet --enable-multiarch --with-arch-32=westmere --enable-multilib --with-multilib-list=m32,m64,mx32 --with-abi=m64 --disable-fixincludes --enable-libstdcxx-time --disable-libstdcxx-debug --disable-libstdcxx-pch --enable-graphite --enable-__cxa_atexit --enable-threads --enable-languages=c,c++,lto --with-linker-hash-style=gnu --enable-gnu-indirect-function --enable-initfini-array --enable-gnu-unique-object --enable-plugin --enable-default-pie --with-gcc-major-version-only --enable-linker-build-id --with-default-libstdcxx-abi=new --enable-fully-dynamic-string --with-arch=ivybridge --with-tune=broadwell --enable-checking=release --without-included-gettext --enable-clocale=gnu --with-system-zlib --enable-shared=libgcc,libgcov,libitm,libssp,libsanitizer --with-specs-file="$CUR/native.specs" || exit 255
-make -j$(($N+4)) bootstrap BOOT_CFLAGS="$CFLAGS" BOOT_CXXFLAGS="$CXXFLAGS" BOOT_LDFLAGS="$LDFLAGS" STAGE1_CFLAGS="$CFLAGS" STAGE1_CXXFLAGS="$CXXFLAGS" STAGE1_LDFLAGS="$LDFLAGS"  MAKEINFO=true || exit 255
+../configure --host=x86_64-linux-gnu --build=x86_64-linux-gnu --target=x86_64-linux-gnu --prefix=/usr --enable-version-specific-runtime-libs --enable-lto --disable-cet --enable-multiarch --with-arch-32=westmere --enable-multilib --with-multilib-list=m32,m64,mx32 --with-abi=m64 --disable-fixincludes --enable-libstdcxx-time --disable-libstdcxx-debug --disable-libstdcxx-pch --enable-graphite --enable-threads --enable-languages=c,c++,lto --with-linker-hash-style=gnu --enable-gnu-indirect-function --enable-gnu-unique-object --enable-plugin --enable-default-pie --with-gcc-major-version-only --enable-linker-build-id --with-default-libstdcxx-abi=new --enable-fully-dynamic-string --with-arch=ivybridge --with-tune=haswell --enable-checking=release --without-included-gettext --enable-clocale=gnu --with-system-zlib --enable-shared=libgcc,libstdc++,libitm,libssp,libsanitizer --with-specs-file="$CUR/native.specs" || exit 255
+make -j$(($N+4)) bootstrap do-compare=true BOOT_CFLAGS="$CFLAGS" BOOT_CXXFLAGS="$CXXFLAGS" BOOT_LDFLAGS="$LDFLAGS" STAGE1_CFLAGS="$CFLAGS" STAGE1_CXXFLAGS="$CXXFLAGS" STAGE1_LDFLAGS="$LDFLAGS"  MAKEINFO=true || exit 255
 
 make -j install-strip DESTDIR=$CUR/tmp MAKEINFO=true
 

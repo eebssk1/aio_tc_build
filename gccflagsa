@@ -1,1 +1,1 @@
--O3 -g1 -D__1ENABLE_AGGRESSIVE_GRAPHITE9__
+-O3 -g1 -D__1ENABLE_AGGRESSIVE_GRAPHITE9__ -flimit-function-alignment -falign-functions=24 -falign-loops=24 -falign-jumps=8:5:2

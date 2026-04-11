@@ -6,7 +6,7 @@ if [ "x$(which ccache)" != "x" ]; then
 export CC="ccache gcc" CXX="ccache g++"
 fi
 
-export CFLAGS="-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=1 -march=ivybridge -mtune=broadwell @$CUR/gccflags"
+export CFLAGS="-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=1 -D__BUILD_NO_CON__ -march=ivybridge -mtune=broadwell @$CUR/gccflags"
 export CXXFLAGS="$CFLAGS"
 export LDFLAGS="@$CUR/ldflagsm"
 
@@ -55,7 +55,7 @@ sed -i "s#\\/ucrt64\\/#${MINGW_NATIVE_PREFIX//\//\\/}\\/#g" gcc/config/i386/ming
 export lt_cv_deplibs_check_method='pass_all'
 export CPPFLAGS_FOR_TARGET="-DWIN32_LEAN_AND_MEAN -DCOM_NO_WINDOWS_H @$CUR/gccflags"
 export LDFLAGS_FOR_TARGET="@$CUR/ldflagsm"
-export CFLAGS_FOR_TARGET="-ffunction-sections -fdata-sections"
+export CFLAGS_FOR_TARGET="-ffunction-sections -fdata-sections -D__BUILD_NO_CON__"
 export CXXFLAGS_FOR_TARGET="$CFLAGS_FOR_TARGET"
 
 echo current utc time 3 is $(date -u)
