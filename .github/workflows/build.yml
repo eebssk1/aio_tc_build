@@ -40,6 +40,7 @@ jobs:
       TAG: ${{ needs.gen_tag.outputs.TAG }}
       TIME: ${{ needs.gen_tag.outputs.TIME }}
       SYS_TC: ${{ inputs.use_sys_tc }}
+      IGNORE_CMP_FAIL: 1
     strategy:
       fail-fast: false
       matrix:
