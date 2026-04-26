@@ -54,8 +54,10 @@ cd $CUR
 
 apt-get install -y gcc-$TARGET || exit 128
 
-cp -r /usr/$TARGET $CUR/out/
-rm -rf $CUR/out/$TARGET/bin
+cp -r /usr/$TARGET $CUR/tmp
+rm -rf $CUR/tmp/bin
+cp -r $CUR/tmp/* $CUR/out/$TARGET/
+rm -rf $CUR/tmp/
 
 cd m_gcc; mkdir build; cd build
 
