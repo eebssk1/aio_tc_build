@@ -44,7 +44,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [linux-native, linux-native-legacy, mingw64-win, mingw64-win-ms, mingw64-cross, mingw64-cross-ms, mingw64-legacy-cross, mingw64-legacy-cross-ms, arm64-cross, arm32-cross, musl-cross]
+        target: [linux-native, linux-native-legacy, mingw64-win, mingw64-win-ms, mingw64-cross, mingw64-cross-ms, mingw64-legacy-cross, mingw64-legacy-cross-ms, arm64-cross, arm32-cross, musl-cross, arm64-gnu-cross, arm32-gnu-cross]
 
     steps:
       - name: checkout repo

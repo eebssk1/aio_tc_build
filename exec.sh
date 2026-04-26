@@ -110,6 +110,14 @@ arm32-cross)
 export LEXLIB=-Wl,--push-state,-Bstatic,-lfl,--pop-state
 exec $CUR/arm.sh 32
 ;;
+arm64-gnu-cross)
+export LEXLIB=-Wl,--push-state,-Bstatic,-lfl,--pop-state
+exec $CUR/arm_g.sh 64
+;;
+arm32-gnu-cross)
+export LEXLIB=-Wl,--push-state,-Bstatic,-lfl,--pop-state
+exec $CUR/arm_g.sh 32
+;;
 musl-cross)
 export LEXLIB=-Wl,--push-state,-Bstatic,-lfl,--pop-state
 exec $CUR/musl.sh
