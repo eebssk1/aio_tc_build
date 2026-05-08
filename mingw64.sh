@@ -44,7 +44,7 @@ cd $CUR
 
 cd m_binutils; mkdir build; cd build
 
-../configure --prefix=$CUR/out --target=x86_64-w64-mingw32 --enable-64-bit-bfd --enable-checking=release --enable-nls --disable-rpath --enable-install-libiberty --enable-plugins --enable-deterministic-archives --disable-werror --enable-lto --with-system-zlib --with-zstd --disable-gdb --disable-gprof --disable-gprofng || exit 255
+../configure --prefix=$CUR/out --target=x86_64-w64-mingw32 --enable-64-bit-bfd --enable-checking=release --disable-nls --disable-rpath --enable-install-libiberty --enable-plugins --enable-deterministic-archives --disable-werror --enable-lto --with-system-zlib --with-zstd --disable-gdb --disable-gprof --disable-gprofng || exit 255
 make -j$(($N+2)) all MAKEINFO=true || exit 255
 
 make -j install-strip MAKEINFO=true
@@ -75,6 +75,7 @@ fi
 cd m_gcc; mkdir build; cd build
 
 export lt_cv_deplibs_check_method='pass_all'
+export gcc_cv_have_tls=yes
 export CPPFLAGS_FOR_TARGET="-DWIN32_LEAN_AND_MEAN -DCOM_NO_WINDOWS_H @$CUR/gccflags"
 export LDFLAGS_FOR_TARGET="@$CUR/ldflagsm"
 export CFLAGS_FOR_TARGET="-ffunction-sections -fdata-sections -D__BUILD_NO_CON__"
@@ -82,7 +83,7 @@ export CXXFLAGS_FOR_TARGET="$CFLAGS_FOR_TARGET"
 
 echo current utc time 3 is $(date -u)
 
-../configure --prefix=$CUR/out --target=x86_64-w64-mingw32 --enable-version-specific-runtime-libs --enable-checking=release --with-local-prefix=$CUR/out/x86_64-w64-mingw32/local  --with-arch=$TAC --with-tune=icelake-client --with-gcc-major-version-only --with-default-libstdcxx-abi=new --disable-cet --disable-vtable-verify --enable-plugin  --enable-libatomic --enable-threads=posix --enable-graphite --enable-fully-dynamic-string --enable-libstdcxx-filesystem-ts --enable-libstdcxx-time --disable-libstdcxx-pch --enable-lto --enable-libgomp --disable-libssp --enable-shared=libgcc,libstdc++,libgomp,libatomic $MLPAR --disable-rpath --enable-nls --disable-werror --disable-symvers --disable-libstdcxx-debug --enable-languages=c,c++,lto --disable-sjlj-exceptions --with-specs-file="$CUR/mingw64.specs" || exit 255
+../configure --prefix=$CUR/out --target=x86_64-w64-mingw32 --enable-mingw-wildcard --enable-version-specific-runtime-libs --enable-checking=release --with-local-prefix=$CUR/out/x86_64-w64-mingw32/local  --with-arch=$TAC --with-tune=icelake-client --with-gcc-major-version-only --disable-cet --disable-vtable-verify --enable-plugin  --enable-libatomic --enable-threads=posix --enable-graphite --enable-libstdcxx-backtrace=yes --enable-fully-dynamic-string --enable-libstdcxx-filesystem-ts --enable-libstdcxx-time --disable-libstdcxx-pch --with-libstdcxx-zoneinfo="yes" --enable-lto --enable-libgomp --disable-libssp --enable-shared=libgcc,libstdc++,libgomp,libatomic $MLPAR --disable-rpath --disable-nls --disable-werror --disable-symvers --disable-libstdcxx-debug --enable-languages=c,c++,lto --disable-sjlj-exceptions --with-specs-file="$CUR/mingw64.specs" || exit 255
 make -j$(($N+2)) all MAKEINFO=true || exit 255
 
 make -j install-strip MAKEINFO=true
