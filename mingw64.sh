@@ -87,6 +87,22 @@ make -j$(($N+2)) all MAKEINFO=true || exit 255
 
 make -j install-strip MAKEINFO=true
 
+GCV=$(cat ../gcc/BASE-VER | cut -d'.' -f 1)
+
+cd $CUR/out/bin
+
+for a in cpp g++ gcc gcc-ar gcc-nm gcc-ranlib gcov
+do
+TA=${a}-${GCV}
+TB=x86_64-w64-mingw32-${a}
+if [ -e $a ] && [ ! -e ${TA} ]; then
+ln -s ${a} ${TA}
+fi
+if [ -e ${TB} ] && [ ! -e ${TB}-${GCV} ]; then
+ln -s ${TB} ${TB}-${GCV}
+fi
+done
+
 echo current utc time 4 is $(date -u)
 TME=$(date +%s)
 TMT0=$((($TMM-$TMS)/60))
@@ -98,7 +114,16 @@ cd $CUR
 
 if [ $MLIB = 1 ]; then
 echo "Copy multi-arch compability wrapper !"
-cp -dr $CUR/mingw-32-wrapper/. out/bin/
+pushd out/bin
+cp -dr $CUR/mingw-32-wrapper/* ./
+for a in cpp g++ gcc gcc-ar gcc-nm gcc-ranlib gcov
+do
+TB=i686-w64-mingw32-$a
+if [ -e ${TB} ] && [ ! -e ${TB}-${GCV}; then
+ln -s ${TB} ${TB}-${GCV}
+fi
+done
+popd
 fi
 
 rm -rf out/x86_64-w64-mingw32/sys-include

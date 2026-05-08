@@ -72,6 +72,22 @@ make -j$(($N+2)) all MAKEINFO=true || exit 255
 
 make -j install-strip MAKEINFO=true
 
+GCV=$(cat ../gcc/BASE-VER | cut -d'.' -f 1)
+
+cd $CUR/out/bin
+
+for a in cpp g++ gcc gcc-ar gcc-nm gcc-ranlib gcov
+do
+TA=${a}-$GCV
+TB=${TARGET}-${a}-$GCV
+if [ -e $a ] && [ ! -e ${TA} ] ; then
+ln -s ${a} ${TA}
+fi
+if [ -e ${TARGET}-$a ] && [ ! -e ${TB} ]; then
+ln -s ${TARGET}-$a ${TB}
+fi
+done
+
 echo current utc time 4 is $(date -u)
 TME=$(date +%s)
 TMT0=$((($TMM-$TMS)/60))

@@ -70,6 +70,22 @@ fi
 
 make -j install-strip MAKEINFO=true
 
+GCV=$(cat ../gcc/BASE-VER | cut -d'.' -f 1)
+
+cd $CUR/out/bin
+
+for a in cpp g++ gcc gcc-ar gcc-nm gcc-ranlib gcov
+do
+TA=${a}-${GCV}
+TB=x86_64-w64-mingw32-${a}
+if [ -e $a ] && [ ! -e ${TA} ]; then
+ln -s ${a} ${TA}
+fi
+if [ -e ${TB} ] && [ ! -e ${TB}-${GCV} ]; then
+ln -s ${TB} ${TB}-${GCV}
+fi
+done
+
 mv mingw-crt/ucrt64${SUF}/bin/*.dll mingw-crt/ucrt64${SUF}/lib*/ || true
 cp -a mingw-crt/ucrt64${SUF}/. out/x86_64-w64-mingw32/
 
