@@ -42,7 +42,7 @@ TMS=$(date +%s)
 
 cd m_binutils; mkdir build; cd build
 
-../configure --prefix=$CUR/out --target=$TARGET $ADDI --with-sysroot=$CUR/out/$TARGET --enable-64-bit-bfd --enable-nls --disable-rpath --disable-multilib --enable-install-libiberty --enable-threads=posix --enable-plugins --enable-deterministic-archives --disable-werror --enable-lto --with-system-zlib --with-zstd --disable-gdb --disable-gprof --disable-gprofng || exit 255
+../configure --prefix=$CUR/out --target=$TARGET $ADDI --with-sysroot=$CUR/out/$TARGET --enable-64-bit-bfd --enable-nls --disable-rpath --disable-multilib --enable-install-libiberty --enable-threads=posix --enable-plugins --enable-deterministic-archives --disable-werror --enable-lto --with-system-zlib --with-zstd --disable-gdb --disable-gdbserver --disable-gprof --disable-gprofng || exit 255
 make -j$(($N+2)) all MAKEINFO=true || exit 255
 
 make -j install-strip MAKEINFO=true

@@ -56,7 +56,7 @@ cd $CUR
 
 cd m_binutils; mkdir build; cd build
 
-../configure --prefix=$CUR/out --host=x86_64-w64-mingw32 --target=x86_64-w64-mingw32 --program-prefix=x86_64-w64-mingw32- --with-sysroot=$CUR/out/x86_64-w64-mingw32 --enable-multilib --enable-64-bit-bfd --enable-checking=release --enable-nls --disable-rpath --enable-install-libiberty --enable-plugins --enable-deterministic-archives --with-system-zlib --with-zstd --disable-werror --enable-lto --disable-gdb --disable-gprof --disable-gprofng || exit 255
+../configure --prefix=$CUR/out --host=x86_64-w64-mingw32 --target=x86_64-w64-mingw32 --program-prefix=x86_64-w64-mingw32- --with-sysroot=$CUR/out/x86_64-w64-mingw32 --enable-multilib --enable-64-bit-bfd --enable-checking=release --enable-nls --disable-rpath --enable-install-libiberty --enable-plugins --enable-deterministic-archives --with-system-zlib --with-zstd --disable-werror --enable-lto --disable-gdb --disable-gdbserver --disable-gprof --disable-gprofng || exit 255
 make -j$(($N+2)) all MAKEINFO=true || exit 255
 
 make -j install-strip MAKEINFO=true
