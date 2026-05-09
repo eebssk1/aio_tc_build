@@ -22,8 +22,8 @@ fi
 
 export PATH=$CUR/out/bin:$PATH
 
-export CFLAGS="-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=1 -D__BUILD_NO_CON__ -I/usr/local/include  @$CUR/gccflags -flto-compression-level=1 -flto=2 -frandom-seed=1"
-export CXXFLAGS="$CFLAGS"
+#export CFLAGS="-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=1 -D__BUILD_NO_CON__ -I/usr/local/include  @$CUR/gccflags -flto-compression-level=1 -flto=2 -frandom-seed=1"
+#export CXXFLAGS="$CFLAGS"
 export LDFLAGS="-L/usr/local/lib @$CUR/ldflags"
 export AR="gcc-ar"
 export RANLIB="gcc-ranlib"
@@ -76,10 +76,10 @@ cd m_gcc; mkdir build; cd build
 
 export lt_cv_deplibs_check_method='pass_all'
 export gcc_cv_have_tls=yes
-export CPPFLAGS_FOR_TARGET="-DWIN32_LEAN_AND_MEAN -DCOM_NO_WINDOWS_H @$CUR/gccflags"
+#export CPPFLAGS_FOR_TARGET="-DWIN32_LEAN_AND_MEAN -DCOM_NO_WINDOWS_H @$CUR/gccflags"
 export LDFLAGS_FOR_TARGET="@$CUR/ldflagsm"
-export CFLAGS_FOR_TARGET="-ffunction-sections -fdata-sections -D__BUILD_NO_CON__"
-export CXXFLAGS_FOR_TARGET="$CFLAGS_FOR_TARGET"
+#export CFLAGS_FOR_TARGET="-ffunction-sections -fdata-sections -D__BUILD_NO_CON__"
+#export CXXFLAGS_FOR_TARGET="$CFLAGS_FOR_TARGET"
 
 echo current utc time 3 is $(date -u)
 

@@ -17,8 +17,8 @@ export PATH=$CUR/x86_64-w64-mingw32-boot/bin:$PATH
 tar --bzip -xf gcc-dep.tb2
 rm gcc-dep.tb2
 
-export CFLAGS="-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=1 -D__BUILD_NO_CON__ @$CUR/gccflags"
-export CXXFLAGS="$CFLAGS"
+#export CFLAGS="-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=1 -D__BUILD_NO_CON__ @$CUR/gccflags"
+#export CXXFLAGS="$CFLAGS"
 export LDFLAGS="-L$CUR/gcc-dep/lib @$CUR/ldflagsm"
 export CPPFLAGS="-I$CUR/gcc-dep/include"
 
@@ -70,10 +70,10 @@ cd m_gcc; mkdir build; cd build
 
 export lt_cv_deplibs_check_method='pass_all'
 export gcc_cv_have_tls=yes
-export CPPFLAGS_FOR_TARGET="-DWIN32_LEAN_AND_MEAN -DCOM_NO_WINDOWS_H @$CUR/gccflags"
+#export CPPFLAGS_FOR_TARGET="-DWIN32_LEAN_AND_MEAN -DCOM_NO_WINDOWS_H @$CUR/gccflags"
 export LDFLAGS_FOR_TARGET="@$CUR/ldflagsm"
-export CFLAGS_FOR_TARGET="-ffunction-sections -fdata-sections -D__BUILD_NO_CON__"
-export CXXFLAGS_FOR_TARGET="$CFLAGS_FOR_TARGET"
+#export CFLAGS_FOR_TARGET="-ffunction-sections -fdata-sections -D__BUILD_NO_CON__"
+#export CXXFLAGS_FOR_TARGET="$CFLAGS_FOR_TARGET"
 
 echo current utc time 3 is $(date -u)
 

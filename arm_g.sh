@@ -30,8 +30,8 @@ fi
 
 export PATH=$CUR/out/bin:$PATH
 
-export CFLAGS="-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=1 -D__BUILD_NO_CON__ -I/usr/local/include  @$CUR/gccflags -flto-compression-level=1 -flto=2 -frandom-seed=1"
-export CXXFLAGS="$CFLAGS"
+#export CFLAGS="-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=1 -D__BUILD_NO_CON__ -I/usr/local/include  @$CUR/gccflags -flto-compression-level=1 -flto=2 -frandom-seed=1"
+#export CXXFLAGS="$CFLAGS"
 export LDFLAGS="-L/usr/local/lib @$CUR/ldflags"
 export AR="gcc-ar"
 export RANLIB="gcc-ranlib"
@@ -61,8 +61,8 @@ rm -rf $CUR/tmp/
 
 cd m_gcc; mkdir build; cd build
 
-export CFLAGS_FOR_TARGET="@$CUR/gccflagsa -D__BUILD_NO_CON__ -ffunction-sections -fdata-sections"
-export CXXFLAGS_FOR_TARGET="-fdeclone-ctor-dtor $CFLAGS_FOR_TARGET"
+#export CFLAGS_FOR_TARGET="@$CUR/gccflagsa -D__BUILD_NO_CON__ -ffunction-sections -fdata-sections"
+#export CXXFLAGS_FOR_TARGET="-fdeclone-ctor-dtor $CFLAGS_FOR_TARGET"
 export LDFLAGS_FOR_TARGET="@$CUR/ldflagsa"
 
 echo current utc time 3 is $(date -u)
