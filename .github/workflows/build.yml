@@ -110,6 +110,82 @@ jobs:
           bodyFile: notes.txt
           omitBodyDuringUpdate: true
 
+  build_a64:
+    runs-on: ubuntu-24.04-arm
+    needs: gen_tag
+    container:
+      image: ghcr.io/eebssk1/debian-trixie-a64:latest
+      volumes:
+        - /root:/user
+    env:
+      TAG: ${{ needs.gen_tag.outputs.TAG }}
+      TIME: ${{ needs.gen_tag.outputs.TIME }}
+      SYS_TC: ${{ inputs.use_sys_tc }}
+      IGNORE_CMP_FAIL: 1
+
+    steps:
+      - name: checkout repo
+        uses: actions/checkout@v4
+      - name: swap
+        run: exec ./swap.sh
+      - name: checkout binutils
+        uses: actions/checkout@v4
+        with:
+          repository: "eebssk1/m_binutils"
+          path: "./m_binutils"
+      - name: checkout gcc
+        uses: actions/checkout@v4
+        with:
+          repository: "eebssk1/m_gcc"
+          path: "./m_gcc"
+      - name: enable ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          verbose: 1
+          max-size: "1872M"
+          key: t_arm_linux-arm64-native
+      - name: build
+        run: |
+          if [ "${{ inputs.use_verbose_ld_super }}" = "true" ]; then
+            export VERBOSE_LD_SUPER=1
+            export VERBOSE_LD=1
+          fi
+          if [ "${{ inputs.disable_native_lto }}" = "true" ]; then
+            export NO_LTO=1
+          fi
+          exec stdbuf -oL ./exec.sh linux-arm64-native
+      - name: log rename
+        run: mv out.log stdout_linux-arm64-native.log || true
+      - name: collect config log
+        if: (!cancelled())
+        run: exec ./logtar.sh
+      - name: upload result
+        uses: actions/upload-artifact@v4
+        with:
+          name: result_linux-arm64-native
+          path: |
+            ./*native.tb2
+            ./*cross*.tb2
+      - name: upload debug output
+        if: (!cancelled())
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug_linux-arm64-native
+          path: |
+            ./conflogs*.tgz
+            ./curouts*.tgz
+            ./stdout_*.log
+      - name: release
+        uses: ncipollo/release-action@v1.16.0
+        with:
+          allowUpdates: true
+          artifacts: "*native.tb2,*native_*.tb2,*cross*.tb2,conflogs*.tgz,onelog.txt,stdout_*.log"
+          commit: main
+          makeLatest: true
+          tag: ${{ env.TAG }}
+          name: ${{ env.TAG }}_${{ env.TIME }}
+          omitBodyDuringUpdate: true
+
   build-msys:
     runs-on: windows-latest
     needs: gen_tag

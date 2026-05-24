@@ -62,6 +62,14 @@ linux-native-profile)
 export LEXLIB=-Wl,--push-state,-Bstatic,-lfl,--pop-state
 exec $CUR/native.sh profile
 ;;
+linux-arm64-native)
+export LEXLIB=-Wl,--push-state,-Bstatic,-lfl,--pop-state
+exec $CUR/arm_gnu_n.sh
+;;
+linux-arm64-native-profile)
+export LEXLIB=-Wl,--push-state,-Bstatic,-lfl,--pop-state
+exec $CUR/arm_gnu_n.sh profile
+;;
 linux-native-legacy)
 export LEXLIB=-Wl,--push-state,-Bstatic,-lfl,--pop-state
 exec $CUR/native_l.sh

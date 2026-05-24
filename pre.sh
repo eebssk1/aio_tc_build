@@ -10,8 +10,9 @@ echo Not root, not install dep!
 else
 apt-get update -y
 apt-get upgrade -y
-apt-get install -y libtcmalloc-minimal4 bsdextrautils
-apt-get install -y zlib1g-dev libzstd-dev libgmp-dev libmpc-dev pkg-config libisl-dev libc6-dev-i386 musl musl-dev time
+apt-get install --reinstall -y build-essential libtcmalloc-minimal4 bsdextrautils bison flex
+apt-get install --reinstall -y libc6-dev zlib1g-dev libzstd-dev libgmp-dev libmpc-dev pkg-config libisl-dev musl musl-dev time
+apt-get install --reinstall -y libc6-dev-i386 || true
 fi
 
 git config --system --add safe.directory '*'
@@ -50,4 +51,4 @@ rm -rf out
 rm -rf *cross*.tb2 *native*.tb2
 rm -rf time-*
 rm -rf tmp
-rm -rf x86_64-* i686-* aarch-* arm*-*
+rm -rf x86_64-* i686-* aarch*-* arm*-*
