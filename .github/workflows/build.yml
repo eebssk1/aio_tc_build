@@ -33,7 +33,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: gen_tag
     container:
-      image: ghcr.io/eebssk1/bbk/debian-bookworm:latest
+      image: ghcr.io/eebssk1/debian-trixie:latest
       volumes:
         - /root:/user
     env:
@@ -114,7 +114,7 @@ jobs:
     runs-on: ubuntu-24.04-arm
     needs: gen_tag
     container:
-      image: ghcr.io/eebssk1/debian-trixie-a64:latest
+      image: ghcr.io/eebssk1/debian-trixie:latest
       volumes:
         - /root:/user
     env:
