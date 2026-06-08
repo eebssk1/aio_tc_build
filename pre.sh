@@ -18,10 +18,10 @@ fi
 git config --system --add safe.directory '*'
 
 if [ ! -e m_binutils ]; then
-git clone --single-branch --depth=1 https://github.com/eebssk1/m_binutils || exit 255
+git clone --single-branch --depth=2 https://github.com/eebssk1/m_binutils || exit 255
 fi
 if [ ! -e m_gcc ]; then
-git clone --single-branch --depth=1 https://github.com/eebssk1/m_gcc || exit 255
+git clone --single-branch --depth=2 https://github.com/eebssk1/m_gcc || exit 255
 fi
 
 if [ ! -e m_gcc ] || [ ! -e m_binutils ]; then
@@ -29,8 +29,8 @@ echo Unkown Error !; exit 255
 fi
 
 echo "This: $(git log --no-decorate -1 --oneline)" >> notes.txt
-echo "GCC: $(cd m_gcc; git log --no-decorate -1 --oneline)" >> notes.txt
-echo "BinUtils: $(cd m_binutils; git log --no-decorate -1 --oneline)" >> notes.txt
+echo "GCC: $(cd m_gcc; git log HEAD~1 --no-decorate -1 --oneline)" >> notes.txt
+echo "BinUtils: $(cd m_binutils; git log HEAD~1 --no-decorate -1 --oneline)" >> notes.txt
 
 
 if [ -e x86_64-linux-gnu ] || [ "$SYS_TC" = "true" ]; then

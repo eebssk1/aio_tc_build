@@ -56,11 +56,13 @@ jobs:
         with:
           repository: "eebssk1/m_binutils"
           path: "./m_binutils"
+          fetch-depth: 2
       - name: checkout gcc
         uses: actions/checkout@v4
         with:
           repository: "eebssk1/m_gcc"
           path: "./m_gcc"
+          fetch-depth: 2
       - name: enable ccache
         uses: hendrikmuhs/ccache-action@v1.2
         with:
@@ -133,11 +135,13 @@ jobs:
         with:
           repository: "eebssk1/m_binutils"
           path: "./m_binutils"
+          fetch-depth: 2
       - name: checkout gcc
         uses: actions/checkout@v4
         with:
           repository: "eebssk1/m_gcc"
           path: "./m_gcc"
+          fetch-depth: 2
       - name: enable ccache
         uses: hendrikmuhs/ccache-action@v1.2
         with:
@@ -213,6 +217,18 @@ jobs:
       - run: git config --global core.autocrlf input
       - name: checkout
         uses: actions/checkout@v4
+      - name: checkout binutils
+        uses: actions/checkout@v4
+        with:
+          repository: "eebssk1/m_binutils"
+          path: "./m_binutils"
+          fetch-depth: 2
+      - name: checkout gcc
+        uses: actions/checkout@v4
+        with:
+          repository: "eebssk1/m_gcc"
+          path: "./m_gcc"
+          fetch-depth: 2
       - name: build
         env:
           MSYSTEM: ${{ matrix.msystem }}
