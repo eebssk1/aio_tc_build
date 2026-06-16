@@ -28,9 +28,47 @@ if [ ! -e m_gcc ] || [ ! -e m_binutils ]; then
 echo Unkown Error !; exit 255
 fi
 
-echo "This: $(git log --no-decorate -1 --oneline)" >> notes.txt
-echo "GCC: $(cd m_gcc; git log HEAD~1 --no-decorate -1 --oneline)" >> notes.txt
-echo "BinUtils: $(cd m_binutils; git log HEAD~1 --no-decorate -1 --oneline)" >> notes.txt
+check_commit() {
+    CDIR=$(pwd)
+    case "$1" in
+        gcc)
+        PRE="GCC:"
+        DIR=m_gcc
+        ;;
+        binutils)
+        PRE="BinUtils:"
+        DIR=m_binutils
+        ;;
+        this)
+        PRE="This:"
+        DIR=.
+        ;;
+        *)
+        exit 255
+        ;;
+    esac
+    commit_msg=$(cd $DIR; git log -1 --format=%s)
+    TXT=../notes.txt
+    if [ "$DIR" = "." ]; then
+        TXT=./notes.txt
+    fi
+    case "$commit_msg" in
+        "Merge pull request #"* | "Merge branch "*)
+        cd $DIR
+        echo $PRE $(git log HEAD~1 --no-decorate -1 --oneline) >> $TXT
+        cd $CDIR
+        ;;
+        *)
+        cd $DIR
+        echo $PRE $(git log --no-decorate -1 --oneline) >> $TXT
+        cd $CDIR
+        ;;
+    esac
+}
+
+check_commit this
+check_commit gcc
+check_commit binutils
 
 
 if [ -e x86_64-linux-gnu ] || [ "$SYS_TC" = "true" ]; then
