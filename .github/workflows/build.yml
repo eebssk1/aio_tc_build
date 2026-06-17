@@ -188,6 +188,7 @@ jobs:
           makeLatest: true
           tag: ${{ env.TAG }}
           name: ${{ env.TAG }}_${{ env.TIME }}
+          bodyFile: notes.txt
           omitBodyDuringUpdate: true
 
   build-msys:
@@ -260,6 +261,7 @@ jobs:
           artifacts: "*native.tb2,*native_*.tb2,*cross*.tb2,conflogs*.tgz,onelog.txt,stdout_*.log"
           commit: main
           makeLatest: true
+          bodyFile: notes.txt
           omitBodyDuringUpdate: true
           tag: ${{ env.TAG }}
           name: ${{ env.TAG }}_${{ env.TIME }}
