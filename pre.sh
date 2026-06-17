@@ -53,7 +53,7 @@ check_commit() {
         TXT=./notes.txt
     fi
     case "$commit_msg" in
-        "Merge pull request #"* | "Merge branch "*)
+        *"erge pull request #"* | *"erge branch "*)
         cd $DIR
         echo $PRE $(git log HEAD~1 --no-decorate -1 --oneline) >> $TXT
         cd $CDIR
