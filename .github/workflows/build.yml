@@ -56,13 +56,13 @@ jobs:
         with:
           repository: "eebssk1/m_binutils"
           path: "./m_binutils"
-          fetch-depth: 2
+          fetch-depth: 5
       - name: checkout gcc
         uses: actions/checkout@v4
         with:
           repository: "eebssk1/m_gcc"
           path: "./m_gcc"
-          fetch-depth: 2
+          fetch-depth: 5
       - name: enable ccache
         uses: hendrikmuhs/ccache-action@v1.2
         with:
@@ -135,13 +135,13 @@ jobs:
         with:
           repository: "eebssk1/m_binutils"
           path: "./m_binutils"
-          fetch-depth: 2
+          fetch-depth: 5
       - name: checkout gcc
         uses: actions/checkout@v4
         with:
           repository: "eebssk1/m_gcc"
           path: "./m_gcc"
-          fetch-depth: 2
+          fetch-depth: 5
       - name: enable ccache
         uses: hendrikmuhs/ccache-action@v1.2
         with:
@@ -223,13 +223,13 @@ jobs:
         with:
           repository: "eebssk1/m_binutils"
           path: "./m_binutils"
-          fetch-depth: 2
+          fetch-depth: 5
       - name: checkout gcc
         uses: actions/checkout@v4
         with:
           repository: "eebssk1/m_gcc"
           path: "./m_gcc"
-          fetch-depth: 2
+          fetch-depth: 5
       - name: build
         env:
           MSYSTEM: ${{ matrix.msystem }}

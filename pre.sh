@@ -18,10 +18,10 @@ fi
 git config --system --add safe.directory '*'
 
 if [ ! -e m_binutils ]; then
-git clone --single-branch --depth=2 https://github.com/eebssk1/m_binutils || exit 255
+git clone --single-branch --depth=5 https://github.com/eebssk1/m_binutils || exit 255
 fi
 if [ ! -e m_gcc ]; then
-git clone --single-branch --depth=2 https://github.com/eebssk1/m_gcc || exit 255
+git clone --single-branch --depth=5 https://github.com/eebssk1/m_gcc || exit 255
 fi
 
 if [ ! -e m_gcc ] || [ ! -e m_binutils ]; then
@@ -47,23 +47,13 @@ check_commit() {
         exit 255
         ;;
     esac
-    commit_msg=$(cd $DIR; git log -1 --format=%s)
     TXT=../notes.txt
     if [ "$DIR" = "." ]; then
         TXT=./notes.txt
     fi
-    case "$commit_msg" in
-        *"erge pull request #"* | *"erge branch "*)
-        cd $DIR
-        echo $PRE $(git log HEAD~1 --no-decorate -1 --oneline) >> $TXT
-        cd $CDIR
-        ;;
-        *)
-        cd $DIR
-        echo $PRE $(git log --no-decorate -1 --oneline) >> $TXT
-        cd $CDIR
-        ;;
-    esac
+    cd "$DIR"
+    echo "$PRE $(git log --no-merges --no-decorate -1 --oneline)" >> "$TXT"
+    cd "$CDIR"
 }
 
 check_commit this
@@ -80,8 +70,13 @@ mv x86_64-linux-gnu /opt/newcc
 fi
 fi
 
-if [ "$MG" = "1" ]; then
-git clone https://git.code.sf.net/p/mingw-w64/mingw-w64 -b master --depth=1 mingw-w64-mingw-w64 || exit 255
+git clone https://git.code.sf.net/p/mingw-w64/mingw-w64 -b master --depth=5 mingw-w64-mingw-w64 || exit 255
+cd mingw-w64-mingw-w64
+echo "MINGW: $(git log --no-merges --no-decorate -1 --oneline)" >> ../note.txt
+cd ..
+
+if [ "$MG" != "1" ]; then
+rm -rf mingw-w64-mingw-w64
 fi
 
 rm -rf m_*/build
