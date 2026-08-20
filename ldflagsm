@@ -1,1 +1,1 @@
--Wl,--relax,--sort-common=descending,--sort-section=name
+-Wl,--relax,--sort-common=descending
