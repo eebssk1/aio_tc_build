@@ -58,6 +58,9 @@ cp -r /usr/$TARGET $CUR/tmp
 rm -rf $CUR/tmp/bin
 cp -r $CUR/tmp/* $CUR/out/$TARGET/
 rm -rf $CUR/tmp/
+mkdir -p $CUR/out/$TARGET/usr/$TARGET
+ln -s ../../lib $CUR/out/$TARGET/usr/$TARGET/lib
+ln -s ../../include $CUR/out/$TARGET/usr/$TARGET/include
 
 cd m_gcc; mkdir build; cd build
 
