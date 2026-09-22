@@ -43,6 +43,19 @@ TMM=$(date +%s)
 
 echo current utc time 2 is $(date -u)
 
+# A native MinGW collect2.exe prefers real-ld.exe from its -B search path over
+# GCC's build-tree collect-ld shell wrapper.  The latter crosses from a native
+# process into MSYS /bin/sh and back into the native linker; that bridge can
+# return 127 without preserving the shell/loader diagnostic.  Keep this alias
+# bootstrap-only so the installed compiler remains relocatable and continues
+# to use its normal target-prefixed linker lookup.
+BOOTSTRAP_REAL_LD=$CUR/out/x86_64-w64-mingw32/bin/real-ld.exe
+BOOTSTRAP_LD=$CUR/out/x86_64-w64-mingw32/bin/ld.exe
+rm -f "$BOOTSTRAP_REAL_LD"
+ln "$BOOTSTRAP_LD" "$BOOTSTRAP_REAL_LD" 2>/dev/null || cp -p "$BOOTSTRAP_LD" "$BOOTSTRAP_REAL_LD" || exit 255
+test -x "$BOOTSTRAP_REAL_LD" || exit 255
+"$BOOTSTRAP_REAL_LD" --version >/dev/null || exit 255
+
 cd $CUR
 
 cd m_gcc; mkdir build; cd build
@@ -72,13 +85,21 @@ echo current utc time 3 is $(date -u)
 export CPATH="$CUR/out/x86_64-w64-mingw32/include${CPATH:+:$CPATH}"
 export LIBRARY_PATH="$CUR/out/x86_64-w64-mingw32/lib${LIBRARY_PATH:+:$LIBRARY_PATH}"
 export MSYS2_ARG_CONV_EXCL="-D"
+GCC_BUILD_LOG="$CUR/gcc-bootstrap.log"
+GCC_FAILURE_LOG="$CUR/gcc-bootstrap-failure.log"
+rm -f "$GCC_BUILD_LOG" "$GCC_FAILURE_LOG"
+{
 make -j$(($N+3)) bootstrap STAGE1_CFLAGS="-g1 -Os" MAKEINFO=true && make -j$(($N+3)) all MAKEINFO=true
+} 2>&1 | tee "$GCC_BUILD_LOG"
+GCC_BUILD_STATUS=${PIPESTATUS[0]}
 
-if [ "$?" != "0" ]; then
+if [ "$GCC_BUILD_STATUS" != "0" ]; then
+tail -n 4000 "$GCC_BUILD_LOG" > "$GCC_FAILURE_LOG" || true
 echo "Error ed !"
 exit 255
 fi
 
+rm -f "$BOOTSTRAP_REAL_LD" || exit 255
 make -j install-strip MAKEINFO=true || exit 255
 
 GCV=$(cat ../gcc/BASE-VER | cut -d'.' -f 1)

@@ -13,7 +13,8 @@ LA=$(find . -type f -name "*cross*.tb2")
 LB=$(find . -type f -name "*native.tb2")
 if [ "x$LA" = "x" ] && [ "x$LB" = "x" ]; then
 echo "taring current output"
-tar -zhcf curouts_$RND.tgz out
+DEBUG_FILES=$(find . -maxdepth 1 -type f -name "gcc-bootstrap-failure.log")
+tar -zhcf curouts_$RND.tgz out $DEBUG_FILES
 fi
 
 exit 0
