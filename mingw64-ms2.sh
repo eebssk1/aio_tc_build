@@ -79,6 +79,22 @@ fi
 sed -n '1,100p' "$PEX_WIN32" | grep -Fq '#include <stdio.h>' || exit 255
 grep -Fq 'child Windows status 0x%08lx' "$PEX_WIN32" || exit 255
 
+# Unlike the generic shared-libgcc fragments, the MinGW fragment does not put
+# $(LDFLAGS) in SHLIB_LINK.  Without it, LDFLAGS_FOR_TARGET reaches configure
+# probes but not the actual libgcc_s DLL link, so the bootstrap-only plugin
+# isolation configured below is silently lost at the failing link.  Mirror GCC
+# upstream commit 0636b7763dca11f9637e3177086fc7f5355773a5 exactly; also migrate
+# the equivalent interim placement used by an earlier version of this script.
+MINGW_SHLIB=libgcc/config/i386/t-slibgcc-cygming
+if ! grep -Fq -- '-shared -nodefaultlibs $(LDFLAGS) \' "$MINGW_SHLIB"; then
+if grep -Fq -- '$(CC) $(LIBGCC2_CFLAGS) $(LDFLAGS) $(SHLIB_PTHREAD_CFLAG) \' "$MINGW_SHLIB"; then
+sed -i 's/$(CC) $(LIBGCC2_CFLAGS) $(LDFLAGS) $(SHLIB_PTHREAD_CFLAG) \\/$(CC) $(LIBGCC2_CFLAGS) $(SHLIB_PTHREAD_CFLAG) \\/' "$MINGW_SHLIB" || exit 255
+fi
+grep -Fq -- '-shared -nodefaultlibs \' "$MINGW_SHLIB" || exit 255
+sed -i 's/-shared -nodefaultlibs \\/-shared -nodefaultlibs $(LDFLAGS) \\/' "$MINGW_SHLIB" || exit 255
+fi
+grep -Fq -- '-shared -nodefaultlibs $(LDFLAGS) \' "$MINGW_SHLIB" || exit 255
+
 for F in Makefile.in Makefile.tpl
 do
 grep -q -- '$(SYSROOT_CFLAGS_FOR_TARGET)' "$F" || exit 255
