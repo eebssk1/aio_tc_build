@@ -61,6 +61,24 @@ cd $CUR
 cd m_gcc; mkdir build; cd build
 
 cd ..
+# MinGW libiberty otherwise truncates the 32-bit Windows process status to
+# eight bits before collect2 reports it.  Preserve the normal wait status, but
+# print the full value for abnormal statuses (for example 0xc0000374 becomes
+# the otherwise ambiguous "ld returned 116 exit status").
+PEX_WIN32=libiberty/pex-win32.c
+grep -Fq 'GetExitCodeProcess (h, &termstat);' "$PEX_WIN32" || exit 255
+if ! sed -n '1,100p' "$PEX_WIN32" | grep -Fq '#include <stdio.h>'; then
+sed -i '/#include <signal.h>/a#include <stdio.h>' "$PEX_WIN32" || exit 255
+fi
+if ! grep -Fq 'child Windows status 0x%08lx' "$PEX_WIN32"; then
+sed -i '/  GetExitCodeProcess (h, &termstat);/a\
+  if ((termstat & ~0xffU) != 0)\
+    fprintf (stderr, "pex-win32: child Windows status 0x%08lx\\n",\
+             (unsigned long) termstat);' "$PEX_WIN32" || exit 255
+fi
+sed -n '1,100p' "$PEX_WIN32" | grep -Fq '#include <stdio.h>' || exit 255
+grep -Fq 'child Windows status 0x%08lx' "$PEX_WIN32" || exit 255
+
 for F in Makefile.in Makefile.tpl
 do
 grep -q -- '$(SYSROOT_CFLAGS_FOR_TARGET)' "$F" || exit 255
@@ -75,7 +93,12 @@ export lt_cv_deplibs_check_method='pass_all'
 export gcc_cv_have_tls=yes
 export glibcxx_cv_atomic_word=yes
 export CPPFLAGS_FOR_TARGET="-DWIN32_LEAN_AND_MEAN -DCOM_NO_WINDOWS_H @$CUR/gccflags"
-export LDFLAGS_FOR_TARGET="@$CUR/ldflagsm"
+# HAVE_LTO_PLUGIN=2 is inferred from the GNU ld version rather than from a
+# successful plugin load.  The failing ordinary stage1 target links therefore
+# load the just-built liblto_plugin.dll even without LTO input.  Isolate that
+# unverified path during bootstrap; the installed compiler keeps its normal
+# plugin defaults and explicit LTO support.
+export LDFLAGS_FOR_TARGET="@$CUR/ldflagsm -fno-use-linker-plugin"
 export CFLAGS_FOR_TARGET="-ffunction-sections -fdata-sections -Wa,-O2 -D__BUILD_NO_CON__"
 export CXXFLAGS_FOR_TARGET="$CFLAGS_FOR_TARGET"
 
