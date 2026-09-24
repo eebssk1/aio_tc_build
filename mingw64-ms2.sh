@@ -113,14 +113,30 @@ export CPPFLAGS_FOR_TARGET="-DWIN32_LEAN_AND_MEAN -DCOM_NO_WINDOWS_H @$CUR/gccfl
 # successful plugin load.  The failing ordinary stage1 target links therefore
 # load the just-built liblto_plugin.dll even without LTO input.  Isolate that
 # unverified path during bootstrap; the installed compiler keeps its normal
-# plugin defaults and explicit LTO support.
-export LDFLAGS_FOR_TARGET="@$CUR/ldflagsm -fno-use-linker-plugin"
+# plugin defaults and explicit LTO support.  Keep the driver option in the same
+# response file as the linker flags because libtool drops unknown bare driver
+# options while rewriting shared-library links, but preserves @response files.
+BOOTSTRAP_TARGET_LDFLAGS=$CUR/ldflagsm-bootstrap
+cat "$CUR/ldflagsm" > "$BOOTSTRAP_TARGET_LDFLAGS" || exit 255
+printf '\n-fno-use-linker-plugin\n' >> "$BOOTSTRAP_TARGET_LDFLAGS" || exit 255
+grep -Fxq -- '-fno-use-linker-plugin' "$BOOTSTRAP_TARGET_LDFLAGS" || exit 255
+export LDFLAGS_FOR_TARGET="@$BOOTSTRAP_TARGET_LDFLAGS"
 export CFLAGS_FOR_TARGET="-ffunction-sections -fdata-sections -Wa,-O2 -D__BUILD_NO_CON__"
 export CXXFLAGS_FOR_TARGET="$CFLAGS_FOR_TARGET"
 
+# Stage 1 finds these host libraries through the system compiler's implicit
+# prefix, but prev-gcc uses the freshly populated target sysroot in stage 2.
+# Fail early if setup-msys2 ever stops providing the native development files;
+# otherwise every declaration probe fails first on a missing gmp.h and creates
+# misleading fallback-declaration errors much later in the bootstrap.
+for HEADER in gmp.h mpfr.h mpc.h isl/ctx.h
+do
+test -f "$MINGW_PREFIX/include/$HEADER" || exit 255
+done
+
 echo current utc time 3 is $(date -u)
 
-../configure --prefix=$CUR/out --target=x86_64-w64-mingw32 --with-sysroot=$CUR/out/x86_64-w64-mingw32 --with-build-sysroot=$(cygpath -am $CUR/out/x86_64-w64-mingw32) --enable-bootstrap --with-build-config=bootstrap-O3 --enable-mingw-wildcard --enable-version-specific-runtime-libs --enable-checking=release --with-local-prefix=/local --with-native-system-header-dir=/include --with-arch=haswell --with-tune=skylake --with-gcc-major-version-only --enable-tls --disable-cet --disable-vtable-verify --enable-plugin  --with-system-zlib --enable-libatomic --enable-threads=posix --enable-graphite --enable-fully-dynamic-string --enable-libstdcxx-filesystem-ts --enable-libstdcxx-time --disable-libstdcxx-pch --enable-libstdcxx-backtrace=yes --with-libstdcxx-zoneinfo="yes" --enable-lto --enable-libgomp --disable-libssp --disable-libvtv --enable-shared=libgcc,libstdc++,libgomp,libatomic --disable-multiarch --disable-multilib --disable-rpath --disable-nls --disable-werror --disable-symvers --disable-libstdcxx-debug --disable-win32-registry --enable-languages=c,c++,lto --disable-sjlj-exceptions --with-specs-file="$CUR/mingw64.specs" || exit 255
+../configure --prefix=$CUR/out --target=x86_64-w64-mingw32 --with-sysroot=$CUR/out/x86_64-w64-mingw32 --with-build-sysroot=$(cygpath -am $CUR/out/x86_64-w64-mingw32) --enable-bootstrap --with-build-config=bootstrap-O3 --enable-mingw-wildcard --enable-version-specific-runtime-libs --enable-checking=release --with-local-prefix=/local --with-native-system-header-dir=/include --with-arch=haswell --with-tune=skylake --with-gcc-major-version-only --enable-tls --disable-cet --disable-vtable-verify --enable-plugin --with-system-zlib --with-{gmp,mpfr,mpc,isl}=${MINGW_PREFIX} --enable-libatomic --enable-threads=posix --enable-graphite --enable-fully-dynamic-string --enable-libstdcxx-filesystem-ts --enable-libstdcxx-time --disable-libstdcxx-pch --enable-libstdcxx-backtrace=yes --with-libstdcxx-zoneinfo="yes" --enable-lto --enable-libgomp --disable-libssp --disable-libvtv --enable-shared=libgcc,libstdc++,libgomp,libatomic --disable-multiarch --disable-multilib --disable-rpath --disable-nls --disable-werror --disable-symvers --disable-libstdcxx-debug --disable-win32-registry --enable-languages=c,c++,lto --disable-sjlj-exceptions --with-specs-file="$CUR/mingw64.specs" || exit 255
 export CPATH="$CUR/out/x86_64-w64-mingw32/include${CPATH:+:$CPATH}"
 export LIBRARY_PATH="$CUR/out/x86_64-w64-mingw32/lib${LIBRARY_PATH:+:$LIBRARY_PATH}"
 export MSYS2_ARG_CONV_EXCL="-D"
