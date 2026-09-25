@@ -218,6 +218,12 @@ jobs:
 
             cp -fp "$HOST_PLUGIN" "$PLUGIN"
             try_link official-ld-official-plugin "-B$HOST_BIN_WIN/"
+
+            set +e
+            bash -x "$WORKSPACE/mingw64-smoke.sh" "$TOOLCHAIN"
+            FULL_SMOKE_STATUS=$?
+            set -e
+            echo "official-plugin-full-smoke status: $FULL_SMOKE_STATUS"
             cp -fp packaged-plugin.dll "$PLUGIN"
           } 2>&1 | tee -a "$SMOKE_LOG"
 
