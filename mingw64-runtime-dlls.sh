@@ -12,14 +12,42 @@ HOST_PREFIX=$(cd "$2" && pwd) || exit 1
 BIN=$TOOLCHAIN/bin
 HOST_BIN=$HOST_PREFIX/bin
 OBJDUMP=$HOST_BIN/objdump.exe
+TARGET=x86_64-w64-mingw32
+TARGET_LIB=$TOOLCHAIN/$TARGET/lib
+TARGET_BIN=$TOOLCHAIN/$TARGET/bin
 
 test -d "$BIN"
 test -x "$OBJDUMP"
 
+# Preserve the DLLs built for target programs before populating the host-tool
+# closure in top-level bin.  Native compiler programs and their output share
+# the same PE architecture, but their pthread/GCC runtimes can come from
+# different builds and are not interchangeable.  Target programs deploy from
+# this directory; host compiler processes continue to resolve beside their
+# executable directories below.
+mkdir -p "$TARGET_BIN"
+for DLL in \
+  libatomic-1.dll \
+  libgcc_s_seh-1.dll \
+  libgomp-1.dll \
+  libstdc++-6.dll \
+  libwinpthread-1.dll
+do
+SOURCE=
+if [ -f "$BIN/$DLL" ]; then
+SOURCE=$BIN/$DLL
+elif [ -f "$TARGET_LIB/$DLL" ]; then
+SOURCE=$TARGET_LIB/$DLL
+fi
+test -n "$SOURCE" || continue
+cp -fp "$SOURCE" "$TARGET_BIN/$DLL"
+echo "preserved target runtime: $TARGET_BIN/$DLL"
+done
+
 # The compiler driver itself imports libwinpthread, so the copy beside gcc.exe
 # must match the UCRT64/MINGW64 host ABI.  The target sysroot may contain a DLL
 # built for a different CRT; do not let that copy shadow the host runtime.
-TARGET_PTHREAD=$TOOLCHAIN/x86_64-w64-mingw32/lib/libwinpthread-1.dll
+TARGET_PTHREAD=$TARGET_LIB/libwinpthread-1.dll
 HOST_PTHREAD=$HOST_BIN/libwinpthread-1.dll
 test -f "$HOST_PTHREAD"
 
@@ -95,4 +123,8 @@ done < "$WORK/imports.sorted"
 done < "$WORK/exe-dirs"
 
 test -f "$BIN/libwinpthread-1.dll"
+test -f "$TARGET_BIN/libgcc_s_seh-1.dll"
+test -f "$TARGET_BIN/libstdc++-6.dll"
+test -f "$TARGET_BIN/libgomp-1.dll"
+test -f "$TARGET_BIN/libwinpthread-1.dll"
 echo "MinGW runtime DLL closure populated: $BIN"
