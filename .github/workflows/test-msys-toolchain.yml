@@ -82,7 +82,9 @@ jobs:
         shell: msys2 {0}
         run: |
           set -uo pipefail
+          set +e
           TEMP_ROOT=$(cygpath -u "$RUNNER_TEMP")
+          WORKSPACE=$(cygpath -u "$GITHUB_WORKSPACE")
           TOOLCHAIN=$TEMP_ROOT/toolchain-smoke/${{ matrix.root }}
           BIN=$TOOLCHAIN/bin
           SMOKE_LOG=$TEMP_ROOT/smoke-${{ matrix.artifact }}.log
@@ -106,7 +108,8 @@ jobs:
             set -x
             gcc.exe -fno-use-linker-plugin -c smoke.c -o smoke.o
             LD=$(gcc.exe -print-prog-name=ld)
-            PLUGIN=$(gcc.exe -print-file-name=liblto_plugin.dll)
+            CC1=$(gcc.exe -print-prog-name=cc1)
+            PLUGIN=$(dirname "$CC1")/liblto_plugin.dll
             HOST_LD=/ucrt64/bin/ld.exe
             HOST_PLUGIN=$(find /ucrt64/lib/gcc/x86_64-w64-mingw32 \
               -type f -name liblto_plugin.dll -print -quit)
@@ -116,6 +119,7 @@ jobs:
             test -f "$HOST_PLUGIN"
 
             echo "packaged ld: $LD"
+            echo "packaged cc1: $CC1"
             echo "packaged plugin: $PLUGIN"
             echo "official ld: $HOST_LD"
             echo "official plugin: $HOST_PLUGIN"
