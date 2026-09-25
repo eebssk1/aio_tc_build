@@ -210,6 +210,15 @@ ln -s ${TB} ${TB}-${GCV}
 fi
 done
 
+# The shared GCC runtimes depend on libwinpthread-1.dll.  mingw-w64 installs it
+# in the target lib directory, which is useful for linking but is not searched
+# by the Windows loader when users put only the toolchain bin directory on
+# PATH.  Keep all redistributable runtime DLLs together in bin.
+WINPTHREAD_DLL=$CUR/out/x86_64-w64-mingw32/lib/libwinpthread-1.dll
+test -f "$WINPTHREAD_DLL" || exit 255
+cp -p "$WINPTHREAD_DLL" "$CUR/out/bin/libwinpthread-1.dll" || exit 255
+test -f "$CUR/out/bin/libwinpthread-1.dll" || exit 255
+
 echo current utc time 4 is $(date -u)
 TME=$(date +%s)
 TMT0=$((($TMM-$TMS)/60))
@@ -219,7 +228,9 @@ echo "part 1 took $TMT0 min, part 2 took $TMT1 min, which sum to $TMA min togeth
 
 cd $CUR
 
-mv out x86_64-w64-mingw32-msys2$SUF || exit 255
-tar -I 'bzip2 -9' -cf x86_64-w64-mingw32-cross_msys2$SUF.tb2 x86_64-w64-mingw32-msys2$SUF || exit 255
+TOOLCHAIN_DIR=x86_64-w64-mingw32-msys2$SUF
+mv out "$TOOLCHAIN_DIR" || exit 255
+bash "$CUR/mingw64-smoke.sh" "$CUR/$TOOLCHAIN_DIR" || exit 255
+tar -I 'bzip2 -9' -cf x86_64-w64-mingw32-cross_msys2$SUF.tb2 "$TOOLCHAIN_DIR" || exit 255
 
 exit 0

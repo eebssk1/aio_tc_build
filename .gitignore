@@ -3,3 +3,4 @@ out*
 tmp*
 x86*
 mingw*
+!mingw64-smoke.sh

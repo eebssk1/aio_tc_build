@@ -1,0 +1,75 @@
+name: Test MSYS2 toolchain artifacts
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - "mingw64-smoke.sh"
+      - ".github/workflows/test-msys-toolchain.yml"
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: 'CI run ID containing result_mingw64-msys2 artifacts'
+        required: false
+        default: '36098754540'
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - artifact: result_mingw64-msys2
+            root: x86_64-w64-mingw32-msys2
+          - artifact: result_mingw64-msys2-ms
+            root: x86_64-w64-mingw32-msys2_ms
+
+    steps:
+      - name: checkout tests
+        uses: actions/checkout@v4
+
+      - name: setup MSYS shell
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MSYS
+          install: bash bzip2 tar
+          update: true
+          release: false
+
+      - name: download toolchain artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ runner.temp }}/toolchain-artifact
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ inputs.run_id || '36098754540' }}
+
+      - name: extract and test installed toolchain
+        shell: msys2 {0}
+        run: |
+          set -euo pipefail
+          TEMP_ROOT=$(cygpath -u "$RUNNER_TEMP")
+          WORKSPACE=$(cygpath -u "$GITHUB_WORKSPACE")
+          ARTIFACT_ROOT=$TEMP_ROOT/toolchain-artifact
+          EXTRACT_ROOT=$TEMP_ROOT/toolchain-smoke
+          TB2=$(find "$ARTIFACT_ROOT" -maxdepth 1 -type f -name '*.tb2' -print -quit)
+          test -n "$TB2"
+          rm -rf "$EXTRACT_ROOT"
+          mkdir -p "$EXTRACT_ROOT"
+          tar -xjf "$TB2" -C "$EXTRACT_ROOT"
+          TOOLCHAIN=$EXTRACT_ROOT/${{ matrix.root }}
+
+          # Artifacts from before the packaging guard kept this runtime beside
+          # target libraries.  Copy it to bin to test the corrected layout too.
+          if [ ! -f "$TOOLCHAIN/bin/libwinpthread-1.dll" ]; then
+            cp -p "$TOOLCHAIN/x86_64-w64-mingw32/lib/libwinpthread-1.dll" \
+              "$TOOLCHAIN/bin/libwinpthread-1.dll"
+          fi
+
+          exec bash "$WORKSPACE/mingw64-smoke.sh" "$TOOLCHAIN"
