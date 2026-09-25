@@ -79,6 +79,7 @@ jobs:
 
       - name: diagnose UCRT64 linker plugin failure
         if: failure() && matrix.host_prefix == '/ucrt64'
+        timeout-minutes: 6
         shell: msys2 {0}
         run: |
           set -uo pipefail
@@ -124,10 +125,10 @@ jobs:
             echo "official ld: $HOST_LD"
             echo "official plugin: $HOST_PLUGIN"
             sha256sum "$LD" "$PLUGIN" "$HOST_LD" "$HOST_PLUGIN"
-            ldd "$LD" || true
-            ldd "$PLUGIN" || true
-            ldd "$HOST_LD" || true
-            ldd "$HOST_PLUGIN" || true
+            /usr/bin/timeout --kill-after=5s 20s ldd "$LD" || true
+            /usr/bin/timeout --kill-after=5s 20s ldd "$PLUGIN" || true
+            /usr/bin/timeout --kill-after=5s 20s ldd "$HOST_LD" || true
+            /usr/bin/timeout --kill-after=5s 20s ldd "$HOST_PLUGIN" || true
 
             try_link()
             {
@@ -135,7 +136,8 @@ jobs:
               shift
               rm -f "$LABEL.exe"
               set +e
-              gcc.exe -v "$@" smoke.o -o "$LABEL.exe"
+              /usr/bin/timeout --kill-after=5s 30s \
+                gcc.exe -v "$@" smoke.o -o "$LABEL.exe"
               STATUS=$?
               set -e
               echo "$LABEL status: $STATUS"
