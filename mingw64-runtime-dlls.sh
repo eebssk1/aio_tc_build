@@ -70,5 +70,43 @@ done < "$WORK/imports.sorted"
 test "$COPIED" = 0 && break
 done
 
+# GCC runs programs from target/bin and libexec directories, not only from the
+# top-level bin directory.  Windows searches an executable's own directory and
+# System32 before PATH, so a same-named system DLL can shadow the compatible
+# copy in top-level bin.  Populate a recursive closure beside the executables
+# in every packaged program directory to make loader resolution deterministic.
+find "$TOOLCHAIN" -type f -iname '*.exe' -printf '%h\n' | sort -u > "$WORK/exe-dirs"
+while :
+do
+LOCAL_COPIED=0
+while IFS= read -r PE_DIR
+do
+: > "$WORK/local-imports"
+while IFS= read -r -d '' PE
+do
+"$OBJDUMP" -p "$PE" | sed -n 's/.*DLL Name: //p' | tr -d '\r' >> "$WORK/local-imports" || exit 1
+done < <(find "$PE_DIR" -maxdepth 1 -type f \( -iname '*.exe' -o -iname '*.dll' \) -print0)
+
+sort -fu "$WORK/local-imports" > "$WORK/local-imports.sorted"
+while IFS= read -r DLL
+do
+test -n "$DLL" || continue
+test -f "$PE_DIR/$DLL" && continue
+SOURCE=
+if [ -f "$BIN/$DLL" ]; then
+SOURCE=$BIN/$DLL
+elif [ -f "$HOST_BIN/$DLL" ]; then
+SOURCE=$HOST_BIN/$DLL
+fi
+test -n "$SOURCE" || continue
+cp -p "$SOURCE" "$PE_DIR/$DLL"
+echo "bundled adjacent runtime: $PE_DIR/$DLL"
+LOCAL_COPIED=$((LOCAL_COPIED + 1))
+done < "$WORK/local-imports.sorted"
+done < "$WORK/exe-dirs"
+
+test "$LOCAL_COPIED" = 0 && break
+done
+
 test -f "$BIN/libwinpthread-1.dll"
 echo "MinGW runtime DLL closure populated: $BIN"
