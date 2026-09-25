@@ -10,7 +10,14 @@ export CFLAGS="-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=1 -D__BUILD_NO_CON__ -Wa,-O2 
 export CXXFLAGS="$CFLAGS"
 export LDFLAGS="@$CUR/ldflagsm"
 
-curl -L "https://github.com/eebssk1/mingw-crt-build/releases/latest/download/mingw-crt.tgz" | tar -zxf - || exit 255
+MINGW_CRT_RELEASE=${MINGW_CRT_RELEASE:-d8d4c2f9}
+MINGW_CRT_SHA256=${MINGW_CRT_SHA256:-0bface6371783b7da5d280b8d1d786e4f9155199374cc7825c4a033e4d393cba}
+MINGW_CRT_ARCHIVE=$CUR/mingw-crt.tgz
+curl --fail --location --retry 3 --output "$MINGW_CRT_ARCHIVE" \
+  "https://github.com/eebssk1/mingw-crt-build/releases/download/$MINGW_CRT_RELEASE/mingw-crt.tgz" || exit 255
+printf '%s  %s\n' "$MINGW_CRT_SHA256" "$MINGW_CRT_ARCHIVE" | sha256sum --check || exit 255
+tar -zxf "$MINGW_CRT_ARCHIVE" || exit 255
+rm -f "$MINGW_CRT_ARCHIVE" || exit 255
 
 
 echo current utc time 1 is $(date -u)
