@@ -153,27 +153,33 @@ compgen -G "$MINGW_PREFIX/lib/libz.*" >/dev/null || exit 255
 compgen -G "$MINGW_PREFIX/lib/libzstd.*" >/dev/null || exit 255
 
 # POSTSTAGE1_LDFLAGS is exported as LDFLAGS to stage 2 and later host modules.
-# Keep GCC's default static runtime flags, isolate the same unverified linker
-# plugin path as target libraries, and expose native zlib/zstd outside the
-# custom target sysroot.  A PE host has no rpath, so this bootstrap build path
-# is not embedded in the installed tools.  Use a response file so libtool does
-# not discard the GCC driver option while rewriting shared-library links.
+# Keep libstdc++ static, but follow the official MSYS2 GCC build and leave
+# libgcc dynamic.  Native GMP/zlib/zstd can already load the host libgcc DLL,
+# so a second static libgcc copy in a host module is unsafe.  The native
+# linker/plugin cross-test also isolates the observed UCRT64 heap corruption
+# to the packaged liblto_plugin.dll rather than either linker.  Isolate the
+# same unverified linker plugin path as target libraries, and expose native
+# zlib/zstd outside the custom target sysroot.  A PE host has no rpath, so this
+# bootstrap build path is not embedded in the installed tools.  Use a response
+# file so libtool does not discard the GCC driver option while rewriting
+# shared-library links.
 BOOTSTRAP_HOST_LDFLAGS=$CUR/ldflagsm-bootstrap-host
 MINGW_HOST_LIBDIR=$(cygpath -am "$MINGW_PREFIX/lib") || exit 255
 cat > "$BOOTSTRAP_HOST_LDFLAGS" <<EOF || exit 255
 -static-libstdc++
--static-libgcc
 -fno-use-linker-plugin
 -L$MINGW_HOST_LIBDIR
 EOF
 grep -Fxq -- '-static-libstdc++' "$BOOTSTRAP_HOST_LDFLAGS" || exit 255
-grep -Fxq -- '-static-libgcc' "$BOOTSTRAP_HOST_LDFLAGS" || exit 255
+if grep -Fxq -- '-static-libgcc' "$BOOTSTRAP_HOST_LDFLAGS"; then
+exit 255
+fi
 grep -Fxq -- '-fno-use-linker-plugin' "$BOOTSTRAP_HOST_LDFLAGS" || exit 255
 grep -Fxq -- "-L$MINGW_HOST_LIBDIR" "$BOOTSTRAP_HOST_LDFLAGS" || exit 255
 
 echo current utc time 3 is $(date -u)
 
-../configure --prefix=$CUR/out --target=x86_64-w64-mingw32 --with-sysroot=$CUR/out/x86_64-w64-mingw32 --with-build-sysroot=$(cygpath -am $CUR/out/x86_64-w64-mingw32) --enable-bootstrap --with-build-config=bootstrap-O3 --with-boot-ldflags="@$BOOTSTRAP_HOST_LDFLAGS" --enable-mingw-wildcard --enable-version-specific-runtime-libs --enable-checking=release --with-local-prefix=/local --with-native-system-header-dir=/include --with-arch=haswell --with-tune=skylake --with-gcc-major-version-only --enable-tls --disable-cet --disable-vtable-verify --enable-plugin --with-system-zlib --with-{gmp,mpfr,mpc,isl}=${MINGW_PREFIX} --enable-libatomic --enable-threads=posix --enable-graphite --enable-fully-dynamic-string --enable-libstdcxx-filesystem-ts --enable-libstdcxx-time --disable-libstdcxx-pch --enable-libstdcxx-backtrace=yes --with-libstdcxx-zoneinfo="yes" --enable-lto --enable-libgomp --disable-libssp --disable-libvtv --enable-shared=libgcc,libstdc++,libgomp,libatomic --disable-multiarch --disable-multilib --disable-rpath --disable-nls --disable-werror --disable-symvers --disable-libstdcxx-debug --disable-win32-registry --enable-languages=c,c++,lto --disable-sjlj-exceptions --with-specs-file="$CUR/mingw64.specs" || exit 255
+../configure --prefix=$CUR/out --target=x86_64-w64-mingw32 --with-sysroot=$CUR/out/x86_64-w64-mingw32 --with-build-sysroot=$(cygpath -am $CUR/out/x86_64-w64-mingw32) --enable-bootstrap --with-build-config=bootstrap-O3 --with-stage1-ldflags="@$BOOTSTRAP_HOST_LDFLAGS" --with-boot-ldflags="@$BOOTSTRAP_HOST_LDFLAGS" --enable-mingw-wildcard --enable-version-specific-runtime-libs --enable-checking=release --with-local-prefix=/local --with-native-system-header-dir=/include --with-arch=haswell --with-tune=skylake --with-gcc-major-version-only --enable-tls --disable-cet --disable-vtable-verify --enable-plugin --with-system-zlib --with-{gmp,mpfr,mpc,isl}=${MINGW_PREFIX} --enable-libatomic --enable-threads=posix --enable-graphite --enable-fully-dynamic-string --enable-libstdcxx-filesystem-ts --enable-libstdcxx-time --disable-libstdcxx-pch --enable-libstdcxx-backtrace=yes --with-libstdcxx-zoneinfo="yes" --enable-lto --enable-libgomp --disable-libssp --disable-libvtv --enable-shared=libgcc,libstdc++,libgomp,libatomic --disable-multiarch --disable-multilib --disable-rpath --disable-nls --disable-werror --disable-symvers --disable-libstdcxx-debug --disable-win32-registry --enable-languages=c,c++,lto --disable-sjlj-exceptions --with-specs-file="$CUR/mingw64.specs" || exit 255
 export CPATH="$CUR/out/x86_64-w64-mingw32/include${CPATH:+:$CPATH}"
 export LIBRARY_PATH="$CUR/out/x86_64-w64-mingw32/lib${LIBRARY_PATH:+:$LIBRARY_PATH}"
 export MSYS2_ARG_CONV_EXCL="-D"
