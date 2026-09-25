@@ -36,6 +36,7 @@ jobs:
           python3 - <<'PY'
           import json
           import os
+          import time
           import urllib.error
           import urllib.request
 
@@ -69,23 +70,48 @@ jobs:
                       f"cancelling stale {workflow} run {run_id} "
                       f"({run['status']}, {run['head_sha'][:8]})"
                   )
-                  cancel = urllib.request.Request(
-                      f'{base}/actions/runs/{run_id}/cancel',
-                      data=b'',
-                      headers=headers,
-                      method='POST',
-                  )
-                  try:
-                      with urllib.request.urlopen(cancel) as response:
-                          print(f'cancel status: {response.status}')
-                  except urllib.error.HTTPError as error:
-                      if error.code != 409:
-                          raise
-                      print(f'run {run_id} already finished')
+                  for attempt in range(1, 5):
+                      cancel = urllib.request.Request(
+                          f'{base}/actions/runs/{run_id}/cancel',
+                          data=b'',
+                          headers=headers,
+                          method='POST',
+                      )
+                      try:
+                          with urllib.request.urlopen(cancel) as response:
+                              print(f'cancel status: {response.status}')
+                          break
+                      except urllib.error.HTTPError as error:
+                          if error.code == 409:
+                              print(f'run {run_id} already finished')
+                              break
+                          rate_limited = (
+                              error.code == 429
+                              or error.headers.get('Retry-After') is not None
+                              or error.headers.get('X-RateLimit-Remaining') == '0'
+                          )
+                          retryable = rate_limited or error.code in {500, 502, 503, 504}
+                          if retryable and attempt < 4:
+                              delay = int(error.headers.get('Retry-After', 5 * attempt))
+                              print(
+                                  f'cancel run {run_id} returned HTTP {error.code}; '
+                                  f'retrying in {delay}s'
+                              )
+                              time.sleep(delay)
+                              continue
+                          detail = error.read().decode('utf-8', errors='replace')
+                          print(
+                              f'warning: could not cancel run {run_id}: '
+                              f'HTTP {error.code}: {detail}'
+                          )
+                          break
+                      finally:
+                          time.sleep(1)
           PY
 
   smoke:
     needs: cleanup-stale-runs
+    if: always()
     runs-on: windows-latest
     strategy:
       fail-fast: false
