@@ -69,10 +69,12 @@ jobs:
           tar -xjf "$TB2" -C "$EXTRACT_ROOT"
           TOOLCHAIN=$EXTRACT_ROOT/${{ matrix.root }}
 
-          bash "$WORKSPACE/mingw64-runtime-dlls.sh" "$TOOLCHAIN" \
-            "${{ matrix.host_prefix }}"
-
-          bash -x "$WORKSPACE/mingw64-smoke.sh" "$TOOLCHAIN" 2>&1 | tee "$SMOKE_LOG"
+          {
+            set -x
+            bash "$WORKSPACE/mingw64-runtime-dlls.sh" "$TOOLCHAIN" \
+              "${{ matrix.host_prefix }}" &&
+            bash "$WORKSPACE/mingw64-smoke.sh" "$TOOLCHAIN"
+          } 2>&1 | tee "$SMOKE_LOG"
           exit ${PIPESTATUS[0]}
 
       - name: upload smoke log

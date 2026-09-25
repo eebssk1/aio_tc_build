@@ -16,13 +16,26 @@ OBJDUMP=$HOST_BIN/objdump.exe
 test -d "$BIN"
 test -x "$OBJDUMP"
 
-# mingw-w64 installs this target runtime beside import libraries rather than
-# host executables.  GCC, libstdc++, and libgomp all need it at process start.
-if [ ! -f "$BIN/libwinpthread-1.dll" ]; then
-test -f "$TOOLCHAIN/x86_64-w64-mingw32/lib/libwinpthread-1.dll"
-cp -p "$TOOLCHAIN/x86_64-w64-mingw32/lib/libwinpthread-1.dll" \
-  "$BIN/libwinpthread-1.dll"
+# The compiler driver itself imports libwinpthread, so the copy beside gcc.exe
+# must match the UCRT64/MINGW64 host ABI.  The target sysroot may contain a DLL
+# built for a different CRT; do not let that copy shadow the host runtime.
+TARGET_PTHREAD=$TOOLCHAIN/x86_64-w64-mingw32/lib/libwinpthread-1.dll
+HOST_PTHREAD=$HOST_BIN/libwinpthread-1.dll
+test -f "$HOST_PTHREAD"
+
+echo "host libwinpthread runtime: $HOST_PTHREAD"
+sha256sum "$HOST_PTHREAD"
+if [ -f "$TARGET_PTHREAD" ]; then
+echo "target libwinpthread runtime: $TARGET_PTHREAD"
+sha256sum "$TARGET_PTHREAD"
+if cmp -s "$HOST_PTHREAD" "$TARGET_PTHREAD"; then
+echo "host and target libwinpthread runtimes are identical"
+else
+echo "host and target libwinpthread runtimes differ; using the host runtime"
 fi
+fi
+cp -fp "$HOST_PTHREAD" "$BIN/libwinpthread-1.dll"
+echo "bundled host runtime: libwinpthread-1.dll"
 
 WORK=$(mktemp -d) || exit 1
 trap 'rm -rf "$WORK"' EXIT
