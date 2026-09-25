@@ -98,7 +98,28 @@ int main()
 EOF
 
 g++.exe -std=c++20 -O2 -Wall -Wextra -Werror smoke.cc -o smoke-cxx.exe
-test "$(./smoke-cxx.exe)" = "cxx-ok"
+echo "smoke-cxx.exe imports:"
+objdump.exe -p smoke-cxx.exe | sed -n 's/.*DLL Name: //p' | sort -fu
+/usr/bin/timeout --kill-after=5s 20s ldd smoke-cxx.exe || true
+set +e
+CXX_OUTPUT=$(./smoke-cxx.exe)
+CXX_STATUS=$?
+set -e
+printf 'smoke-cxx.exe status: %s output: <%s>\n' "$CXX_STATUS" "$CXX_OUTPUT"
+if [ "$CXX_STATUS" != 0 ] || [ "$CXX_OUTPUT" != cxx-ok ]; then
+g++.exe -std=c++20 -O2 -Wall -Wextra -Werror \
+  -static-libgcc -static-libstdc++ smoke.cc -o smoke-cxx-static-runtime.exe
+echo "smoke-cxx-static-runtime.exe imports:"
+objdump.exe -p smoke-cxx-static-runtime.exe | sed -n 's/.*DLL Name: //p' | sort -fu
+/usr/bin/timeout --kill-after=5s 20s ldd smoke-cxx-static-runtime.exe || true
+set +e
+CXX_STATIC_OUTPUT=$(./smoke-cxx-static-runtime.exe)
+CXX_STATIC_STATUS=$?
+set -e
+printf 'smoke-cxx-static-runtime.exe status: %s output: <%s>\n' \
+  "$CXX_STATIC_STATUS" "$CXX_STATIC_OUTPUT"
+exit 1
+fi
 
 cat > lto-lib.c <<'EOF'
 int lto_answer(void)
