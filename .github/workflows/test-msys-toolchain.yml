@@ -77,6 +77,85 @@ jobs:
           } 2>&1 | tee "$SMOKE_LOG"
           exit ${PIPESTATUS[0]}
 
+      - name: diagnose UCRT64 linker plugin failure
+        if: failure() && matrix.host_prefix == '/ucrt64'
+        shell: msys2 {0}
+        run: |
+          set -uo pipefail
+          TEMP_ROOT=$(cygpath -u "$RUNNER_TEMP")
+          TOOLCHAIN=$TEMP_ROOT/toolchain-smoke/${{ matrix.root }}
+          BIN=$TOOLCHAIN/bin
+          SMOKE_LOG=$TEMP_ROOT/smoke-${{ matrix.artifact }}.log
+          WORK=$TEMP_ROOT/plugin-diagnostic
+          rm -rf "$WORK"
+          mkdir -p "$WORK"
+          cd "$WORK"
+
+          export PATH="$BIN:/usr/bin"
+          unset CPATH C_INCLUDE_PATH CPLUS_INCLUDE_PATH LIBRARY_PATH
+          unset GCC_EXEC_PREFIX COMPILER_PATH
+
+          cat > smoke.c <<'EOF'
+          int main(void)
+          {
+            return 0;
+          }
+          EOF
+
+          {
+            set -x
+            gcc.exe -fno-use-linker-plugin -c smoke.c -o smoke.o
+            LD=$(gcc.exe -print-prog-name=ld)
+            PLUGIN=$(gcc.exe -print-file-name=liblto_plugin.dll)
+            HOST_LD=/ucrt64/bin/ld.exe
+            HOST_PLUGIN=$(find /ucrt64/lib/gcc/x86_64-w64-mingw32 \
+              -type f -name liblto_plugin.dll -print -quit)
+            test -x "$LD"
+            test -f "$PLUGIN"
+            test -x "$HOST_LD"
+            test -f "$HOST_PLUGIN"
+
+            echo "packaged ld: $LD"
+            echo "packaged plugin: $PLUGIN"
+            echo "official ld: $HOST_LD"
+            echo "official plugin: $HOST_PLUGIN"
+            sha256sum "$LD" "$PLUGIN" "$HOST_LD" "$HOST_PLUGIN"
+            ldd "$LD" || true
+            ldd "$PLUGIN" || true
+            ldd "$HOST_LD" || true
+            ldd "$HOST_PLUGIN" || true
+
+            try_link()
+            {
+              LABEL=$1
+              shift
+              rm -f "$LABEL.exe"
+              set +e
+              gcc.exe -v "$@" smoke.o -o "$LABEL.exe"
+              STATUS=$?
+              set -e
+              echo "$LABEL status: $STATUS"
+              if [ "$STATUS" = 0 ]; then
+                test -x "$LABEL.exe"
+                "./$LABEL.exe"
+              fi
+            }
+
+            cp -p "$PLUGIN" packaged-plugin.dll
+            try_link packaged-ld-packaged-plugin
+
+            cp -fp "$HOST_PLUGIN" "$PLUGIN"
+            try_link packaged-ld-official-plugin
+
+            cp -fp packaged-plugin.dll "$PLUGIN"
+            HOST_BIN_WIN=$(cygpath -am /ucrt64/bin)
+            try_link official-ld-packaged-plugin "-B$HOST_BIN_WIN/"
+
+            cp -fp "$HOST_PLUGIN" "$PLUGIN"
+            try_link official-ld-official-plugin "-B$HOST_BIN_WIN/"
+            cp -fp packaged-plugin.dll "$PLUGIN"
+          } 2>&1 | tee -a "$SMOKE_LOG"
+
       - name: upload smoke log
         if: always()
         uses: actions/upload-artifact@v4
