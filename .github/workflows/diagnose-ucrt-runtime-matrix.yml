@@ -26,7 +26,7 @@ jobs:
         uses: msys2/setup-msys2@v2
         with:
           msystem: MSYS
-          install: mingw-w64-ucrt-x86_64-toolchain bash bzip2 tar
+          install: mingw-w64-ucrt-x86_64-toolchain bash bzip2 curl tar zstd
           update: true
           release: false
 
@@ -38,7 +38,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           run-id: '36098754540'
 
-      - name: test DLL startup component combinations
+      - name: build DLL startup component combinations
         shell: msys2 {0}
         run: |
           set -uo pipefail
@@ -46,18 +46,27 @@ jobs:
           WORKSPACE=$(cygpath -u "$GITHUB_WORKSPACE")
           ARTIFACT_ROOT=$TEMP_ROOT/toolchain-artifact
           EXTRACT_ROOT=$TEMP_ROOT/toolchain-startup-ab
+          REFERENCE_ROOT=$TEMP_ROOT/msys2-crt-reference
           LOG=$TEMP_ROOT/ucrt-dll-startup-ab.log
           TB2=$(find "$ARTIFACT_ROOT" -maxdepth 1 -type f -name '*.tb2' -print -quit)
           test -n "$TB2" || exit 1
-          rm -rf "$EXTRACT_ROOT"
-          mkdir -p "$EXTRACT_ROOT"
+          rm -rf "$EXTRACT_ROOT" "$REFERENCE_ROOT"
+          mkdir -p "$EXTRACT_ROOT" "$REFERENCE_ROOT"
           tar -xjf "$TB2" -C "$EXTRACT_ROOT" || exit 1
+
+          CRT_PACKAGE=$TEMP_ROOT/mingw-w64-ucrt-x86_64-crt-14.0.0.r248.g7735a1a63-1-any.pkg.tar.zst
+          curl --fail --location --retry 3 --output "$CRT_PACKAGE" \
+            https://mirror.msys2.org/mingw/ucrt64/mingw-w64-ucrt-x86_64-crt-14.0.0.r248.g7735a1a63-1-any.pkg.tar.zst || exit 1
+          printf '%s  %s\n' \
+            3b69de2a2a5a99c49601165feae2c76a3abd9ffbae61c67437919eb08469e5b1 \
+            "$CRT_PACKAGE" | sha256sum --check || exit 1
+          tar --zstd -xf "$CRT_PACKAGE" -C "$REFERENCE_ROOT" || exit 1
 
           TOOLCHAIN=$EXTRACT_ROOT/x86_64-w64-mingw32-msys2
           bash "$WORKSPACE/mingw64-runtime-dlls.sh" "$TOOLCHAIN" /ucrt64 || exit 1
           BIN=$TOOLCHAIN/bin
           CUSTOM_LIB=$TOOLCHAIN/x86_64-w64-mingw32/lib
-          OFFICIAL_LIB=/ucrt64/lib
+          OFFICIAL_LIB=$REFERENCE_ROOT/ucrt64/lib
           WORK=$TEMP_ROOT/dll-startup-ab-work
           rm -rf "$WORK"
           mkdir -p "$WORK/original"
@@ -90,68 +99,11 @@ jobs:
           }
           EOF
 
-          cat > loader.c <<'EOF'
-          #include <windows.h>
-          #include <stdio.h>
-
-          typedef int (*probe_state_fn)(void);
-
-          int main(int argc, char **argv)
-          {
-            int failed = 0;
-            int i;
-
-            for (i = 1; i < argc; ++i) {
-              HMODULE module;
-              probe_state_fn probe_state;
-              DWORD error;
-              char message[512] = {0};
-
-              SetLastError(ERROR_SUCCESS);
-              module = LoadLibraryA(argv[i]);
-              if (!module) {
-                error = GetLastError();
-                FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM |
-                               FORMAT_MESSAGE_IGNORE_INSERTS,
-                               NULL, error, 0, message,
-                               (DWORD)sizeof(message), NULL);
-                printf("load %s failed error=%lu message=<%s>\n",
-                       argv[i], (unsigned long)error, message);
-                failed = 1;
-                continue;
-              }
-
-              probe_state = (probe_state_fn)(void *)GetProcAddress(module,
-                                                                  "probe_state");
-              if (!probe_state) {
-                error = GetLastError();
-                printf("symbol %s failed error=%lu\n",
-                       argv[i], (unsigned long)error);
-                failed = 1;
-              } else {
-                int value = probe_state();
-                printf("load %s ok ctor-state=%d\n", argv[i], value);
-                if (value != 1)
-                  failed = 1;
-              }
-              if (!FreeLibrary(module)) {
-                error = GetLastError();
-                printf("unload %s failed error=%lu\n",
-                       argv[i], (unsigned long)error);
-                failed = 1;
-              } else {
-                printf("unload %s ok\n", argv[i]);
-              }
-            }
-            return failed;
-          }
-          EOF
-
           {
             set -x
-            printf '%s\n' '=== component locations ==='
-            "$BIN/gcc.exe" -print-file-name=dllcrt2.o
-            "$BIN/gcc.exe" -print-file-name=libmingw32.a
+            printf '%s\n' '=== component locations and hashes ==='
+            "$BIN/gcc.exe" -print-file-name=dllcrt2.o || true
+            "$BIN/gcc.exe" -print-file-name=libmingw32.a || true
             ls -l "$CUSTOM_LIB/dllcrt2.o" "$CUSTOM_LIB/libmingw32.a" \
                   "$OFFICIAL_LIB/dllcrt2.o" "$OFFICIAL_LIB/libmingw32.a"
             sha256sum "$CUSTOM_LIB/dllcrt2.o" "$CUSTOM_LIB/libmingw32.a" \
@@ -187,12 +139,10 @@ jobs:
               select_component "$MINGW_KIND" libmingw32.a
               echo "=== build $LABEL dllcrt=$DLLCRT_KIND libmingw32=$MINGW_KIND ==="
               sha256sum "$CUSTOM_LIB/dllcrt2.o" "$CUSTOM_LIB/libmingw32.a"
-              set +e
               "$BIN/gcc.exe" -fno-use-linker-plugin -O0 -g0 -shared \
                 -Wl,--no-insert-timestamp probe.c -o "probe-$LABEL.dll" \
                 >"build-$LABEL.log" 2>&1
               STATUS=$?
-              set -e
               printf 'build %s status: %s\n' "$LABEL" "$STATUS"
               cat "build-$LABEL.log"
               if test "$STATUS" -eq 0; then
@@ -210,28 +160,48 @@ jobs:
             build_probe OO official official
             restore_custom
             trap - EXIT
-
-            /ucrt64/bin/gcc.exe -O2 -Wall -Wextra -Werror -static \
-              loader.c -o loader.exe
-            sha256sum loader.exe
-            /ucrt64/bin/objdump.exe -p loader.exe |
-              sed -n '/The Import Tables/,/The Function Table/p' || true
-
-            DLLS=()
-            for dll in probe-CC.dll probe-CO.dll probe-OC.dll probe-OO.dll; do
-              if test -f "$dll"; then
-                DLLS+=("$dll")
-              fi
-            done
-
-            echo '=== native LoadLibraryA results ==='
-            set +e
-            /c/Windows/System32/cmd.exe /d /c \
-              "loader.exe ${DLLS[*]} & echo native-status:%ERRORLEVEL%"
-            CMD_STATUS=$?
-            set -e
-            echo "cmd-status: $CMD_STATUS"
           } 2>&1 | tee "$LOG"
+
+      - name: test DLLs with native Windows loader
+        if: always()
+        shell: pwsh
+        run: |
+          $work = Join-Path $env:RUNNER_TEMP 'dll-startup-ab-work'
+          $log = Join-Path $env:RUNNER_TEMP 'ucrt-dll-startup-ab.log'
+          @'
+          import _ctypes
+          import ctypes
+          from pathlib import Path
+
+          work = Path(__import__('os').environ['RUNNER_TEMP']) / 'dll-startup-ab-work'
+          failed = False
+          print('=== native ctypes.WinDLL results ===')
+          for label in ('CC', 'CO', 'OC', 'OO'):
+              path = work / f'probe-{label}.dll'
+              if not path.exists():
+                  print(f'load {label} skipped: DLL was not built')
+                  failed = True
+                  continue
+              try:
+                  module = ctypes.WinDLL(str(path), use_last_error=True)
+              except OSError as error:
+                  print(f'load {label} failed winerror={error.winerror} error=<{error}>')
+                  failed = True
+                  continue
+              function = module.probe_state
+              function.argtypes = []
+              function.restype = ctypes.c_int
+              state = function()
+              print(f'load {label} ok ctor-state={state}')
+              if state != 1:
+                  failed = True
+              handle = module._handle
+              del function
+              del module
+              _ctypes.FreeLibrary(handle)
+              print(f'unload {label} ok')
+          print(f'native-result={"failure" if failed else "success"}')
+          '@ | python - 2>&1 | Tee-Object -FilePath $log -Append
 
       - name: upload DLL startup A-B log
         if: always()
