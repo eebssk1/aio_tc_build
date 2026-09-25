@@ -96,16 +96,20 @@ fi
 grep -Fq -- '-shared -nodefaultlibs $(LDFLAGS) \' "$MINGW_SHLIB" || exit 255
 
 # The MinGW UTF-8 manifest fragment performs a separate relocatable link with
-# $(COMPILER), bypassing the normal GCC link recipes and their stage-specific
-# LDFLAGS.  In stage 2 this silently re-enables the unverified linker plugin and
-# triggers the same native ld heap corruption.  Propagate LDFLAGS here too, so
-# the bootstrap host response file applies without changing installed specs.
+# $(COMPILER), bypassing the normal GCC link recipes.  In stage 2 this silently
+# re-enables the unverified linker plugin and triggers the same native ld heap
+# corruption.  Do not propagate all LDFLAGS: the stage 1 flags include
+# --relax, which PE ld rejects together with -r.  Disable only the problematic
+# plugin path; this changes neither installed specs nor ordinary final links.
 MINGW_UTF8=gcc/config/i386/x-mingw32-utf8
-if ! grep -Fq -- '$(COMPILER) $(LDFLAGS) -r -nostdlib utf8rc-mingw32.o sym-mingw32.o -o $@' "$MINGW_UTF8"; then
-grep -Fq -- '$(COMPILER) -r -nostdlib utf8rc-mingw32.o sym-mingw32.o -o $@' "$MINGW_UTF8" || exit 255
-sed -i 's/$(COMPILER) -r -nostdlib utf8rc-mingw32.o sym-mingw32.o -o $@/$(COMPILER) $(LDFLAGS) -r -nostdlib utf8rc-mingw32.o sym-mingw32.o -o $@/' "$MINGW_UTF8" || exit 255
+if grep -Fq -- '$(COMPILER) $(LDFLAGS) -r -nostdlib utf8rc-mingw32.o sym-mingw32.o -o $@' "$MINGW_UTF8"; then
+sed -i 's/$(COMPILER) $(LDFLAGS) -r -nostdlib utf8rc-mingw32.o sym-mingw32.o -o $@/$(COMPILER) -fno-use-linker-plugin -r -nostdlib utf8rc-mingw32.o sym-mingw32.o -o $@/' "$MINGW_UTF8" || exit 255
 fi
-grep -Fq -- '$(COMPILER) $(LDFLAGS) -r -nostdlib utf8rc-mingw32.o sym-mingw32.o -o $@' "$MINGW_UTF8" || exit 255
+if ! grep -Fq -- '$(COMPILER) -fno-use-linker-plugin -r -nostdlib utf8rc-mingw32.o sym-mingw32.o -o $@' "$MINGW_UTF8"; then
+grep -Fq -- '$(COMPILER) -r -nostdlib utf8rc-mingw32.o sym-mingw32.o -o $@' "$MINGW_UTF8" || exit 255
+sed -i 's/$(COMPILER) -r -nostdlib utf8rc-mingw32.o sym-mingw32.o -o $@/$(COMPILER) -fno-use-linker-plugin -r -nostdlib utf8rc-mingw32.o sym-mingw32.o -o $@/' "$MINGW_UTF8" || exit 255
+fi
+grep -Fq -- '$(COMPILER) -fno-use-linker-plugin -r -nostdlib utf8rc-mingw32.o sym-mingw32.o -o $@' "$MINGW_UTF8" || exit 255
 
 for F in Makefile.in Makefile.tpl
 do
