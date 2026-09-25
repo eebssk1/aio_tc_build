@@ -17,6 +17,11 @@ on:
         description: 'Enable LD verbose'
         type: boolean
         default: false
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   gen_tag:
     runs-on: ubuntu-latest

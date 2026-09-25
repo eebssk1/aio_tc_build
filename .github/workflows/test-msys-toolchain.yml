@@ -27,10 +27,11 @@ jobs:
   cleanup-stale-runs:
     runs-on: ubuntu-latest
     steps:
-      - name: cancel older runs of this smoke workflow
+      - name: cancel stale smoke and build runs
         env:
           GH_TOKEN: ${{ github.token }}
           CURRENT_RUN_ID: ${{ github.run_id }}
+          CURRENT_SHA: ${{ github.sha }}
         run: |
           python3 - <<'PY'
           import json
@@ -40,8 +41,9 @@ jobs:
 
           repository = os.environ['GITHUB_REPOSITORY']
           current_run_id = int(os.environ['CURRENT_RUN_ID'])
+          current_sha = os.environ['CURRENT_SHA']
           token = os.environ['GH_TOKEN']
-          workflow = 'test-msys-toolchain.yml'
+          workflows = ('test-msys-toolchain.yml', 'build.yml')
           base = f'https://api.github.com/repos/{repository}'
           headers = {
               'Accept': 'application/vnd.github+json',
@@ -49,33 +51,37 @@ jobs:
               'X-GitHub-Api-Version': '2022-11-28',
           }
 
-          request = urllib.request.Request(
-              f'{base}/actions/workflows/{workflow}/runs?per_page=100',
-              headers=headers,
-          )
-          with urllib.request.urlopen(request) as response:
-              runs = json.load(response)['workflow_runs']
-
-          for run in runs:
-              run_id = int(run['id'])
-              if run_id >= current_run_id:
-                  continue
-              if run['status'] not in {'queued', 'in_progress'}:
-                  continue
-              print(f"cancelling stale smoke run {run_id} ({run['status']})")
-              cancel = urllib.request.Request(
-                  f'{base}/actions/runs/{run_id}/cancel',
-                  data=b'',
+          for workflow in workflows:
+              request = urllib.request.Request(
+                  f'{base}/actions/workflows/{workflow}/runs?per_page=100',
                   headers=headers,
-                  method='POST',
               )
-              try:
-                  with urllib.request.urlopen(cancel) as response:
-                      print(f'cancel status: {response.status}')
-              except urllib.error.HTTPError as error:
-                  if error.code != 409:
-                      raise
-                  print(f'smoke run {run_id} already finished')
+              with urllib.request.urlopen(request) as response:
+                  runs = json.load(response)['workflow_runs']
+
+              for run in runs:
+                  run_id = int(run['id'])
+                  if run_id >= current_run_id or run['head_sha'] == current_sha:
+                      continue
+                  if run['status'] not in {'queued', 'in_progress'}:
+                      continue
+                  print(
+                      f"cancelling stale {workflow} run {run_id} "
+                      f"({run['status']}, {run['head_sha'][:8]})"
+                  )
+                  cancel = urllib.request.Request(
+                      f'{base}/actions/runs/{run_id}/cancel',
+                      data=b'',
+                      headers=headers,
+                      method='POST',
+                  )
+                  try:
+                      with urllib.request.urlopen(cancel) as response:
+                          print(f'cancel status: {response.status}')
+                  except urllib.error.HTTPError as error:
+                      if error.code != 409:
+                          raise
+                      print(f'run {run_id} already finished')
           PY
 
   smoke:
