@@ -53,11 +53,12 @@ jobs:
       - name: extract and test installed toolchain
         shell: msys2 {0}
         run: |
-          set -euo pipefail
+          set -uo pipefail
           TEMP_ROOT=$(cygpath -u "$RUNNER_TEMP")
           WORKSPACE=$(cygpath -u "$GITHUB_WORKSPACE")
           ARTIFACT_ROOT=$TEMP_ROOT/toolchain-artifact
           EXTRACT_ROOT=$TEMP_ROOT/toolchain-smoke
+          SMOKE_LOG=$TEMP_ROOT/smoke-${{ matrix.artifact }}.log
           TB2=$(find "$ARTIFACT_ROOT" -maxdepth 1 -type f -name '*.tb2' -print -quit)
           test -n "$TB2"
           rm -rf "$EXTRACT_ROOT"
@@ -72,4 +73,13 @@ jobs:
               "$TOOLCHAIN/bin/libwinpthread-1.dll"
           fi
 
-          exec bash "$WORKSPACE/mingw64-smoke.sh" "$TOOLCHAIN"
+          bash -x "$WORKSPACE/mingw64-smoke.sh" "$TOOLCHAIN" 2>&1 | tee "$SMOKE_LOG"
+          exit ${PIPESTATUS[0]}
+
+      - name: upload smoke log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-log-${{ matrix.artifact }}
+          path: ${{ runner.temp }}/smoke-${{ matrix.artifact }}.log
+          if-no-files-found: error
