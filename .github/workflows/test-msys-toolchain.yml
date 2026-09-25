@@ -73,7 +73,7 @@ jobs:
             set -x
             bash "$WORKSPACE/mingw64-runtime-dlls.sh" "$TOOLCHAIN" \
               "${{ matrix.host_prefix }}" &&
-            bash "$WORKSPACE/mingw64-smoke.sh" "$TOOLCHAIN"
+            bash -x "$WORKSPACE/mingw64-smoke.sh" "$TOOLCHAIN"
           } 2>&1 | tee "$SMOKE_LOG"
           exit ${PIPESTATUS[0]}
 

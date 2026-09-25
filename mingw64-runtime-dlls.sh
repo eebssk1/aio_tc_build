@@ -24,11 +24,13 @@ HOST_PTHREAD=$HOST_BIN/libwinpthread-1.dll
 test -f "$HOST_PTHREAD"
 
 echo "host libwinpthread runtime: $HOST_PTHREAD"
-sha256sum "$HOST_PTHREAD"
+HOST_PTHREAD_HASH=$(sha256sum "$HOST_PTHREAD" | sed 's/[[:space:]].*//')
+echo "$HOST_PTHREAD_HASH  $HOST_PTHREAD"
 if [ -f "$TARGET_PTHREAD" ]; then
 echo "target libwinpthread runtime: $TARGET_PTHREAD"
-sha256sum "$TARGET_PTHREAD"
-if cmp -s "$HOST_PTHREAD" "$TARGET_PTHREAD"; then
+TARGET_PTHREAD_HASH=$(sha256sum "$TARGET_PTHREAD" | sed 's/[[:space:]].*//')
+echo "$TARGET_PTHREAD_HASH  $TARGET_PTHREAD"
+if [ "$HOST_PTHREAD_HASH" = "$TARGET_PTHREAD_HASH" ]; then
 echo "host and target libwinpthread runtimes are identical"
 else
 echo "host and target libwinpthread runtimes differ; using the host runtime"

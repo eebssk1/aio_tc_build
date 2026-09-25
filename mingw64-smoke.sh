@@ -48,7 +48,28 @@ int main(void)
 }
 EOF
 
-gcc.exe -O2 -Wall -Wextra -Werror smoke.c -o smoke-c.exe
+CC1=$(gcc.exe -print-prog-name=cc1)
+AS=$(gcc.exe -print-prog-name=as)
+LD=$(gcc.exe -print-prog-name=ld)
+echo "cc1: $CC1"
+echo "as: $AS"
+echo "ld: $LD"
+"$CC1" --version
+"$AS" --version
+"$LD" --version
+
+# Keep the first C build split into individual driver stages.  Besides testing
+# each installed program lookup, this makes a native Windows child exception
+# attributable to cc1, the assembler, or the linker in the Actions log.  Link
+# once without the linker plugin before testing the installed default: a
+# failure confined to the latter identifies plugin loading rather than a basic
+# compiler/binutils or runtime-DLL problem.
+gcc.exe -v -E smoke.c -o smoke.i
+gcc.exe -v -O2 -Wall -Wextra -Werror -S smoke.i -o smoke.s
+gcc.exe -v -c smoke.s -o smoke.o
+gcc.exe -v -fno-use-linker-plugin smoke.o -o smoke-c-no-plugin.exe
+test "$(./smoke-c-no-plugin.exe)" = "c-ok"
+gcc.exe -v smoke.o -o smoke-c.exe
 test "$(./smoke-c.exe)" = "c-ok"
 objdump.exe -f smoke-c.exe | grep -Fq 'file format pei-x86-64'
 
