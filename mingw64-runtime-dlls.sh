@@ -93,10 +93,10 @@ do
 test -n "$DLL" || continue
 test -f "$PE_DIR/$DLL" && continue
 SOURCE=
-if [ -f "$BIN/$DLL" ]; then
-SOURCE=$BIN/$DLL
-elif [ -f "$HOST_BIN/$DLL" ]; then
+if [ -f "$HOST_BIN/$DLL" ]; then
 SOURCE=$HOST_BIN/$DLL
+elif [ -f "$BIN/$DLL" ]; then
+SOURCE=$BIN/$DLL
 fi
 test -n "$SOURCE" || continue
 cp -p "$SOURCE" "$PE_DIR/$DLL"
