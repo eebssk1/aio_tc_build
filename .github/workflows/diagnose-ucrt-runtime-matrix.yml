@@ -139,10 +139,12 @@ jobs:
               select_component "$MINGW_KIND" libmingw32.a
               echo "=== build $LABEL dllcrt=$DLLCRT_KIND libmingw32=$MINGW_KIND ==="
               sha256sum "$CUSTOM_LIB/dllcrt2.o" "$CUSTOM_LIB/libmingw32.a"
+              set +e
               "$BIN/gcc.exe" -fno-use-linker-plugin -O0 -g0 -shared \
                 -Wl,--no-insert-timestamp probe.c -o "probe-$LABEL.dll" \
                 >"build-$LABEL.log" 2>&1
               STATUS=$?
+              set -e
               printf 'build %s status: %s\n' "$LABEL" "$STATUS"
               cat "build-$LABEL.log"
               if test "$STATUS" -eq 0; then
