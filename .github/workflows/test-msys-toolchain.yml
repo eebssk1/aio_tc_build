@@ -256,7 +256,60 @@ jobs:
             FULL_SMOKE_STATUS=$?
             set -e
             echo "official-plugin-full-smoke status: $FULL_SMOKE_STATUS"
-            cp -fp packaged-plugin.dll "$PLUGIN"
+
+            if [ "$FULL_SMOKE_STATUS" != 0 ]; then
+              TARGET_RUNTIME=$TOOLCHAIN/x86_64-w64-mingw32/runtime
+              CXX_WORK=$WORK/cxx-runtime-diagnostic
+              rm -rf "$CXX_WORK"
+              mkdir -p "$CXX_WORK/custom"
+              cp -p "$TARGET_RUNTIME"/*.dll "$CXX_WORK/custom/"
+              cp -p "$CXX_WORK/custom"/*.dll "$CXX_WORK/"
+              cd "$CXX_WORK"
+
+              cat > smoke.cc <<'EOF'
+          #include <iostream>
+          #include <numeric>
+          #include <vector>
+
+          int main()
+          {
+            const std::vector<int> values{1, 2, 3, 4};
+            if (std::accumulate(values.begin(), values.end(), 0) != 10)
+              return 1;
+            std::cout << "cxx-ok\n";
+            return 0;
+          }
+          EOF
+
+              g++.exe -std=c++20 -O2 -Wall -Wextra -Werror \
+                smoke.cc -o runtime-smoke.exe
+              echo "runtime-smoke.exe imports:"
+              objdump.exe -p runtime-smoke.exe |
+                sed -n 's/.*DLL Name: //p' | sort -fu
+
+              try_cxx_runtime()
+              {
+                LABEL=$1
+                echo "$LABEL runtime hashes:"
+                sha256sum libgcc_s_seh-1.dll libstdc++-6.dll libwinpthread-1.dll
+                /usr/bin/timeout --kill-after=5s 20s ldd runtime-smoke.exe || true
+                set +e
+                OUTPUT=$(./runtime-smoke.exe 2>&1)
+                STATUS=$?
+                set -e
+                printf '%s status: %s output: <%s>\n' "$LABEL" "$STATUS" "$OUTPUT"
+              }
+
+              try_cxx_runtime custom-target-runtime
+              cp -fp /ucrt64/bin/libwinpthread-1.dll .
+              try_cxx_runtime official-pthread
+              cp -fp /ucrt64/bin/libgcc_s_seh-1.dll .
+              try_cxx_runtime official-gcc-pthread
+              cp -fp /ucrt64/bin/libstdc++-6.dll .
+              try_cxx_runtime official-cxx-runtime
+            fi
+
+            cp -fp "$WORK/packaged-plugin.dll" "$PLUGIN"
           } 2>&1 | tee -a "$SMOKE_LOG"
 
       - name: upload smoke log
