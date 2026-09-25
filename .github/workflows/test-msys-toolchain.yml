@@ -5,6 +5,7 @@ on:
     branches: [ "main" ]
     paths:
       - "mingw64-smoke.sh"
+      - "mingw64-runtime-dlls.sh"
       - ".github/workflows/test-msys-toolchain.yml"
   workflow_dispatch:
     inputs:
@@ -27,8 +28,10 @@ jobs:
         include:
           - artifact: result_mingw64-msys2
             root: x86_64-w64-mingw32-msys2
+            host_prefix: /ucrt64
           - artifact: result_mingw64-msys2-ms
             root: x86_64-w64-mingw32-msys2_ms
+            host_prefix: /mingw64
 
     steps:
       - name: checkout tests
@@ -38,7 +41,7 @@ jobs:
         uses: msys2/setup-msys2@v2
         with:
           msystem: MSYS
-          install: bash bzip2 tar
+          install: mingw-w64-ucrt-x86_64-toolchain mingw-w64-x86_64-toolchain bash bzip2 tar gmp-devel mpfr-devel mpc-devel isl-devel zlib-devel libzstd-devel
           update: true
           release: false
 
@@ -66,12 +69,8 @@ jobs:
           tar -xjf "$TB2" -C "$EXTRACT_ROOT"
           TOOLCHAIN=$EXTRACT_ROOT/${{ matrix.root }}
 
-          # Artifacts from before the packaging guard kept this runtime beside
-          # target libraries.  Copy it to bin to test the corrected layout too.
-          if [ ! -f "$TOOLCHAIN/bin/libwinpthread-1.dll" ]; then
-            cp -p "$TOOLCHAIN/x86_64-w64-mingw32/lib/libwinpthread-1.dll" \
-              "$TOOLCHAIN/bin/libwinpthread-1.dll"
-          fi
+          bash "$WORKSPACE/mingw64-runtime-dlls.sh" "$TOOLCHAIN" \
+            "${{ matrix.host_prefix }}"
 
           bash -x "$WORKSPACE/mingw64-smoke.sh" "$TOOLCHAIN" 2>&1 | tee "$SMOKE_LOG"
           exit ${PIPESTATUS[0]}

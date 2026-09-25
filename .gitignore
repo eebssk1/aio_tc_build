@@ -4,3 +4,4 @@ tmp*
 x86*
 mingw*
 !mingw64-smoke.sh
+!mingw64-runtime-dlls.sh

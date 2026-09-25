@@ -210,14 +210,9 @@ ln -s ${TB} ${TB}-${GCV}
 fi
 done
 
-# The shared GCC runtimes depend on libwinpthread-1.dll.  mingw-w64 installs it
-# in the target lib directory, which is useful for linking but is not searched
-# by the Windows loader when users put only the toolchain bin directory on
-# PATH.  Keep all redistributable runtime DLLs together in bin.
-WINPTHREAD_DLL=$CUR/out/x86_64-w64-mingw32/lib/libwinpthread-1.dll
-test -f "$WINPTHREAD_DLL" || exit 255
-cp -p "$WINPTHREAD_DLL" "$CUR/out/bin/libwinpthread-1.dll" || exit 255
-test -f "$CUR/out/bin/libwinpthread-1.dll" || exit 255
+# Bundle the complete recursive host DLL closure required by the installed
+# compiler, linker, cc1 frontends, LTO tools, and shared target runtimes.
+bash "$CUR/mingw64-runtime-dlls.sh" "$CUR/out" "$MINGW_PREFIX" || exit 255
 
 echo current utc time 4 is $(date -u)
 TME=$(date +%s)

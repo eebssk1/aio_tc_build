@@ -31,7 +31,8 @@ export PATH="$BIN:/usr/bin"
 test "$(gcc.exe -dumpmachine)" = "$TARGET"
 test "$(g++.exe -dumpmachine)" = "$TARGET"
 gcc.exe --version
-ld.exe --version | head -n 1
+LD_VERSION=$(ld.exe --version)
+printf '%s\n' "$LD_VERSION" | sed -n '1p'
 
 WORK=$(mktemp -d) || exit 1
 trap 'rm -rf "$WORK"' EXIT
