@@ -1,0 +1,162 @@
+name: Diagnose UCRT64 runtime matrix
+
+on:
+  push:
+    branches: [ "diagnose-ucrt-runtime-matrix" ]
+    paths:
+      - ".github/workflows/diagnose-ucrt-runtime-matrix.yml"
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: diagnose-ucrt-runtime-matrix
+  cancel-in-progress: true
+
+jobs:
+  diagnose:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - name: checkout diagnostic
+        uses: actions/checkout@v4
+
+      - name: setup MSYS shell
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MSYS
+          install: mingw-w64-ucrt-x86_64-toolchain bash bzip2 tar
+          update: true
+          release: false
+
+      - name: download old UCRT64 toolchain artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: result_mingw64-msys2
+          path: ${{ runner.temp }}/toolchain-artifact
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: '36098754540'
+
+      - name: test independent runtime combinations
+        shell: msys2 {0}
+        run: |
+          set -euo pipefail
+          TEMP_ROOT=$(cygpath -u "$RUNNER_TEMP")
+          WORKSPACE=$(cygpath -u "$GITHUB_WORKSPACE")
+          ARTIFACT_ROOT=$TEMP_ROOT/toolchain-artifact
+          EXTRACT_ROOT=$TEMP_ROOT/toolchain-runtime-matrix
+          LOG=$TEMP_ROOT/ucrt-runtime-matrix.log
+          TB2=$(find "$ARTIFACT_ROOT" -maxdepth 1 -type f -name '*.tb2' -print -quit)
+          test -n "$TB2"
+          rm -rf "$EXTRACT_ROOT"
+          mkdir -p "$EXTRACT_ROOT"
+          tar -xjf "$TB2" -C "$EXTRACT_ROOT"
+          TOOLCHAIN=$EXTRACT_ROOT/x86_64-w64-mingw32-msys2
+          bash "$WORKSPACE/mingw64-runtime-dlls.sh" "$TOOLCHAIN" /ucrt64
+
+          BIN=$TOOLCHAIN/bin
+          TARGET_RUNTIME=$TOOLCHAIN/x86_64-w64-mingw32/runtime
+          WORK=$TEMP_ROOT/runtime-matrix-work
+          rm -rf "$WORK"
+          mkdir -p "$WORK/custom" "$WORK/official"
+          cp -p "$TARGET_RUNTIME"/*.dll "$WORK/custom/"
+          cp -p /ucrt64/bin/libgcc_s_seh-1.dll \
+            /ucrt64/bin/libstdc++-6.dll \
+            /ucrt64/bin/libwinpthread-1.dll "$WORK/official/"
+          cd "$WORK"
+
+          export PATH="$BIN:/usr/bin"
+          unset CC CXX CFLAGS CXXFLAGS CPPFLAGS LDFLAGS
+          unset CPATH C_INCLUDE_PATH CPLUS_INCLUDE_PATH LIBRARY_PATH
+          unset GCC_EXEC_PREFIX COMPILER_PATH
+
+          cat > smoke.cc <<'EOF'
+          #include <iostream>
+          #include <numeric>
+          #include <vector>
+
+          int main()
+          {
+            const std::vector<int> values{1, 2, 3, 4};
+            if (std::accumulate(values.begin(), values.end(), 0) != 10)
+              return 1;
+            std::cout << "cxx-ok\n";
+            return 0;
+          }
+          EOF
+
+          {
+            set -x
+            g++.exe -fno-use-linker-plugin -std=c++20 -O2 \
+              -Wall -Wextra -Werror smoke.cc -o runtime-smoke.exe
+            g++.exe -fno-use-linker-plugin -std=c++20 -O2 \
+              -Wall -Wextra -Werror -static-libgcc -static-libstdc++ \
+              smoke.cc -o runtime-smoke-static.exe
+
+            test_dynamic()
+            {
+              LABEL=$1
+              GCC_KIND=$2
+              CXX_KIND=$3
+              PTHREAD_KIND=$4
+              cp -fp "$WORK/$GCC_KIND/libgcc_s_seh-1.dll" .
+              cp -fp "$WORK/$CXX_KIND/libstdc++-6.dll" .
+              cp -fp "$WORK/$PTHREAD_KIND/libwinpthread-1.dll" .
+              echo "=== dynamic $LABEL ==="
+              sha256sum libgcc_s_seh-1.dll libstdc++-6.dll libwinpthread-1.dll
+              /usr/bin/timeout --kill-after=5s 20s ldd runtime-smoke.exe || true
+              set +e
+              OUTPUT=$(./runtime-smoke.exe 2>&1)
+              STATUS=$?
+              set -e
+              printf 'dynamic %s status: %s output: <%s>\n' \
+                "$LABEL" "$STATUS" "$OUTPUT"
+              set +e
+              cmd.exe /d /c 'runtime-smoke.exe & echo native-status:%ERRORLEVEL%'
+              CMD_STATUS=$?
+              set -e
+              echo "dynamic $LABEL cmd-status: $CMD_STATUS"
+            }
+
+            test_static()
+            {
+              LABEL=$1
+              PTHREAD_KIND=$2
+              cp -fp "$WORK/$PTHREAD_KIND/libwinpthread-1.dll" .
+              echo "=== static $LABEL ==="
+              sha256sum libwinpthread-1.dll
+              /usr/bin/timeout --kill-after=5s 20s ldd runtime-smoke-static.exe || true
+              set +e
+              OUTPUT=$(./runtime-smoke-static.exe 2>&1)
+              STATUS=$?
+              set -e
+              printf 'static %s status: %s output: <%s>\n' \
+                "$LABEL" "$STATUS" "$OUTPUT"
+              set +e
+              cmd.exe /d /c 'runtime-smoke-static.exe & echo native-status:%ERRORLEVEL%'
+              CMD_STATUS=$?
+              set -e
+              echo "static $LABEL cmd-status: $CMD_STATUS"
+            }
+
+            test_dynamic CCC custom custom custom
+            test_dynamic OCC official custom custom
+            test_dynamic COC custom official custom
+            test_dynamic CCO custom custom official
+            test_dynamic OOC official official custom
+            test_dynamic OCO official custom official
+            test_dynamic COO custom official official
+            test_dynamic OOO official official official
+
+            test_static custom-pthread custom
+            test_static official-pthread official
+          } 2>&1 | tee "$LOG"
+
+      - name: upload runtime matrix log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ucrt-runtime-matrix-log
+          path: ${{ runner.temp }}/ucrt-runtime-matrix.log
+          if-no-files-found: error
