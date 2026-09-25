@@ -14,7 +14,7 @@ HOST_BIN=$HOST_PREFIX/bin
 OBJDUMP=$HOST_BIN/objdump.exe
 TARGET=x86_64-w64-mingw32
 TARGET_LIB=$TOOLCHAIN/$TARGET/lib
-TARGET_BIN=$TOOLCHAIN/$TARGET/bin
+TARGET_RUNTIME=$TOOLCHAIN/$TARGET/runtime
 
 test -d "$BIN"
 test -x "$OBJDUMP"
@@ -22,10 +22,10 @@ test -x "$OBJDUMP"
 # Preserve the DLLs built for target programs before populating the host-tool
 # closure in top-level bin.  Native compiler programs and their output share
 # the same PE architecture, but their pthread/GCC runtimes can come from
-# different builds and are not interchangeable.  Target programs deploy from
-# this directory; host compiler processes continue to resolve beside their
-# executable directories below.
-mkdir -p "$TARGET_BIN"
+# different builds and are not interchangeable.  Keep the deployment closure
+# outside target/bin because that directory contains host as.exe/ld.exe and
+# therefore needs host DLLs beside those executables.
+mkdir -p "$TARGET_RUNTIME"
 for DLL in \
   libatomic-1.dll \
   libgcc_s_seh-1.dll \
@@ -34,14 +34,14 @@ for DLL in \
   libwinpthread-1.dll
 do
 SOURCE=
-if [ -f "$BIN/$DLL" ]; then
-SOURCE=$BIN/$DLL
-elif [ -f "$TARGET_LIB/$DLL" ]; then
+if [ -f "$TARGET_LIB/$DLL" ]; then
 SOURCE=$TARGET_LIB/$DLL
+elif [ -f "$BIN/$DLL" ]; then
+SOURCE=$BIN/$DLL
 fi
 test -n "$SOURCE" || continue
-cp -fp "$SOURCE" "$TARGET_BIN/$DLL"
-echo "preserved target runtime: $TARGET_BIN/$DLL"
+cp -fp "$SOURCE" "$TARGET_RUNTIME/$DLL"
+echo "preserved target runtime: $TARGET_RUNTIME/$DLL"
 done
 
 # The compiler driver itself imports libwinpthread, so the copy beside gcc.exe
@@ -123,8 +123,11 @@ done < "$WORK/imports.sorted"
 done < "$WORK/exe-dirs"
 
 test -f "$BIN/libwinpthread-1.dll"
-test -f "$TARGET_BIN/libgcc_s_seh-1.dll"
-test -f "$TARGET_BIN/libstdc++-6.dll"
-test -f "$TARGET_BIN/libgomp-1.dll"
-test -f "$TARGET_BIN/libwinpthread-1.dll"
+test -f "$TARGET_RUNTIME/libgcc_s_seh-1.dll"
+test -f "$TARGET_RUNTIME/libstdc++-6.dll"
+test -f "$TARGET_RUNTIME/libgomp-1.dll"
+test -f "$TARGET_RUNTIME/libwinpthread-1.dll"
+if [ -f "$TARGET_PTHREAD" ]; then
+test "$(sha256sum "$TARGET_RUNTIME/libwinpthread-1.dll" | sed 's/[[:space:]].*//')" = "$TARGET_PTHREAD_HASH"
+fi
 echo "MinGW runtime DLL closure populated: $BIN"

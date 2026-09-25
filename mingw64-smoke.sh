@@ -10,7 +10,7 @@ fi
 TOOLCHAIN=$(cd "$1" && pwd) || exit 1
 BIN=$TOOLCHAIN/bin
 TARGET=x86_64-w64-mingw32
-TARGET_BIN=$TOOLCHAIN/$TARGET/bin
+TARGET_RUNTIME=$TOOLCHAIN/$TARGET/runtime
 
 test -x "$BIN/gcc.exe"
 test -x "$BIN/g++.exe"
@@ -20,10 +20,10 @@ test -f "$BIN/libgcc_s_seh-1.dll"
 test -f "$BIN/libstdc++-6.dll"
 test -f "$BIN/libgomp-1.dll"
 test -f "$BIN/libwinpthread-1.dll"
-test -f "$TARGET_BIN/libgcc_s_seh-1.dll"
-test -f "$TARGET_BIN/libstdc++-6.dll"
-test -f "$TARGET_BIN/libgomp-1.dll"
-test -f "$TARGET_BIN/libwinpthread-1.dll"
+test -f "$TARGET_RUNTIME/libgcc_s_seh-1.dll"
+test -f "$TARGET_RUNTIME/libstdc++-6.dll"
+test -f "$TARGET_RUNTIME/libgomp-1.dll"
+test -f "$TARGET_RUNTIME/libwinpthread-1.dll"
 
 # Do not let the runner's UCRT64/MINGW64 toolchain or stale build-tree paths
 # satisfy a compiler, linker, header, library, or runtime DLL lookup.  Windows
@@ -44,7 +44,7 @@ trap 'rm -rf "$WORK"' EXIT
 # Model deployment of a dynamically linked target program.  Keep this closure
 # beside the generated executables so Windows does not resolve same-named host
 # compiler DLLs from top-level bin through PATH.
-cp -p "$TARGET_BIN"/*.dll "$WORK/"
+cp -p "$TARGET_RUNTIME"/*.dll "$WORK/"
 cd "$WORK"
 
 cat > smoke.c <<'EOF'
