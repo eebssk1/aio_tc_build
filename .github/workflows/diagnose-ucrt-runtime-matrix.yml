@@ -1,4 +1,4 @@
-name: Diagnose UCRT64 runtime matrix
+name: Diagnose UCRT64 DLL startup
 
 on:
   push:
@@ -11,7 +11,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: diagnose-ucrt-runtime-matrix
+  group: diagnose-ucrt-dll-startup
   cancel-in-progress: true
 
 jobs:
@@ -38,125 +38,203 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           run-id: '36098754540'
 
-      - name: test independent runtime combinations
+      - name: test DLL startup component combinations
         shell: msys2 {0}
         run: |
-          set -euo pipefail
+          set -uo pipefail
           TEMP_ROOT=$(cygpath -u "$RUNNER_TEMP")
-          WORKSPACE=$(cygpath -u "$GITHUB_WORKSPACE")
           ARTIFACT_ROOT=$TEMP_ROOT/toolchain-artifact
-          EXTRACT_ROOT=$TEMP_ROOT/toolchain-runtime-matrix
-          LOG=$TEMP_ROOT/ucrt-runtime-matrix.log
+          EXTRACT_ROOT=$TEMP_ROOT/toolchain-startup-ab
+          LOG=$TEMP_ROOT/ucrt-dll-startup-ab.log
           TB2=$(find "$ARTIFACT_ROOT" -maxdepth 1 -type f -name '*.tb2' -print -quit)
-          test -n "$TB2"
+          test -n "$TB2" || exit 1
           rm -rf "$EXTRACT_ROOT"
           mkdir -p "$EXTRACT_ROOT"
-          tar -xjf "$TB2" -C "$EXTRACT_ROOT"
+          tar -xjf "$TB2" -C "$EXTRACT_ROOT" || exit 1
+
           TOOLCHAIN=$EXTRACT_ROOT/x86_64-w64-mingw32-msys2
-          bash "$WORKSPACE/mingw64-runtime-dlls.sh" "$TOOLCHAIN" /ucrt64
-
           BIN=$TOOLCHAIN/bin
-          TARGET_RUNTIME=$TOOLCHAIN/x86_64-w64-mingw32/runtime
-          WORK=$TEMP_ROOT/runtime-matrix-work
+          CUSTOM_LIB=$TOOLCHAIN/x86_64-w64-mingw32/lib
+          OFFICIAL_LIB=/ucrt64/lib
+          WORK=$TEMP_ROOT/dll-startup-ab-work
           rm -rf "$WORK"
-          mkdir -p "$WORK/custom" "$WORK/official"
-          cp -p "$TARGET_RUNTIME"/*.dll "$WORK/custom/"
-          cp -p /ucrt64/bin/libgcc_s_seh-1.dll \
-            /ucrt64/bin/libstdc++-6.dll \
-            /ucrt64/bin/libwinpthread-1.dll "$WORK/official/"
-          cd "$WORK"
+          mkdir -p "$WORK/original"
+          cd "$WORK" || exit 1
 
-          export PATH="$BIN:/usr/bin"
           unset CC CXX CFLAGS CXXFLAGS CPPFLAGS LDFLAGS
           unset CPATH C_INCLUDE_PATH CPLUS_INCLUDE_PATH LIBRARY_PATH
           unset GCC_EXEC_PREFIX COMPILER_PATH
 
-          cat > smoke.cc <<'EOF'
-          #include <iostream>
-          #include <numeric>
-          #include <vector>
+          cat > probe.c <<'EOF'
+          #include <windows.h>
 
-          int main()
+          static volatile LONG state;
+
+          __attribute__((constructor))
+          static void probe_ctor(void)
           {
-            const std::vector<int> values{1, 2, 3, 4};
-            if (std::accumulate(values.begin(), values.end(), 0) != 10)
-              return 1;
-            std::cout << "cxx-ok\n";
-            return 0;
+            InterlockedIncrement(&state);
+          }
+
+          __attribute__((destructor))
+          static void probe_dtor(void)
+          {
+            InterlockedDecrement(&state);
+          }
+
+          __declspec(dllexport) int probe_state(void)
+          {
+            return (int)state;
+          }
+          EOF
+
+          cat > loader.c <<'EOF'
+          #include <windows.h>
+          #include <stdio.h>
+
+          typedef int (*probe_state_fn)(void);
+
+          int main(int argc, char **argv)
+          {
+            int failed = 0;
+            int i;
+
+            for (i = 1; i < argc; ++i) {
+              HMODULE module;
+              probe_state_fn probe_state;
+              DWORD error;
+              char message[512] = {0};
+
+              SetLastError(ERROR_SUCCESS);
+              module = LoadLibraryA(argv[i]);
+              if (!module) {
+                error = GetLastError();
+                FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM |
+                               FORMAT_MESSAGE_IGNORE_INSERTS,
+                               NULL, error, 0, message,
+                               (DWORD)sizeof(message), NULL);
+                printf("load %s failed error=%lu message=<%s>\n",
+                       argv[i], (unsigned long)error, message);
+                failed = 1;
+                continue;
+              }
+
+              probe_state = (probe_state_fn)(void *)GetProcAddress(module,
+                                                                  "probe_state");
+              if (!probe_state) {
+                error = GetLastError();
+                printf("symbol %s failed error=%lu\n",
+                       argv[i], (unsigned long)error);
+                failed = 1;
+              } else {
+                int value = probe_state();
+                printf("load %s ok ctor-state=%d\n", argv[i], value);
+                if (value != 1)
+                  failed = 1;
+              }
+              if (!FreeLibrary(module)) {
+                error = GetLastError();
+                printf("unload %s failed error=%lu\n",
+                       argv[i], (unsigned long)error);
+                failed = 1;
+              } else {
+                printf("unload %s ok\n", argv[i]);
+              }
+            }
+            return failed;
           }
           EOF
 
           {
             set -x
-            g++.exe -fno-use-linker-plugin -std=c++20 -O2 \
-              -Wall -Wextra -Werror smoke.cc -o runtime-smoke.exe
-            g++.exe -fno-use-linker-plugin -std=c++20 -O2 \
-              -Wall -Wextra -Werror -static-libgcc -static-libstdc++ \
-              smoke.cc -o runtime-smoke-static.exe
+            printf '%s\n' '=== component locations ==='
+            "$BIN/gcc.exe" -print-file-name=dllcrt2.o
+            "$BIN/gcc.exe" -print-file-name=libmingw32.a
+            ls -l "$CUSTOM_LIB/dllcrt2.o" "$CUSTOM_LIB/libmingw32.a" \
+                  "$OFFICIAL_LIB/dllcrt2.o" "$OFFICIAL_LIB/libmingw32.a"
+            sha256sum "$CUSTOM_LIB/dllcrt2.o" "$CUSTOM_LIB/libmingw32.a" \
+                      "$OFFICIAL_LIB/dllcrt2.o" "$OFFICIAL_LIB/libmingw32.a"
 
-            test_dynamic()
+            cp -fp "$CUSTOM_LIB/dllcrt2.o" "$WORK/original/dllcrt2.o"
+            cp -fp "$CUSTOM_LIB/libmingw32.a" "$WORK/original/libmingw32.a"
+
+            restore_custom()
             {
-              LABEL=$1
-              GCC_KIND=$2
-              CXX_KIND=$3
-              PTHREAD_KIND=$4
-              cp -fp "$WORK/$GCC_KIND/libgcc_s_seh-1.dll" .
-              cp -fp "$WORK/$CXX_KIND/libstdc++-6.dll" .
-              cp -fp "$WORK/$PTHREAD_KIND/libwinpthread-1.dll" .
-              echo "=== dynamic $LABEL ==="
-              sha256sum libgcc_s_seh-1.dll libstdc++-6.dll libwinpthread-1.dll
-              /usr/bin/timeout --kill-after=5s 20s ldd runtime-smoke.exe || true
-              set +e
-              OUTPUT=$(./runtime-smoke.exe 2>&1)
-              STATUS=$?
-              set -e
-              printf 'dynamic %s status: %s output: <%s>\n' \
-                "$LABEL" "$STATUS" "$OUTPUT"
-              set +e
-              cmd.exe /d /c 'runtime-smoke.exe & echo native-status:%ERRORLEVEL%'
-              CMD_STATUS=$?
-              set -e
-              echo "dynamic $LABEL cmd-status: $CMD_STATUS"
+              cp -fp "$WORK/original/dllcrt2.o" "$CUSTOM_LIB/dllcrt2.o"
+              cp -fp "$WORK/original/libmingw32.a" "$CUSTOM_LIB/libmingw32.a"
+            }
+            trap restore_custom EXIT
+
+            select_component()
+            {
+              KIND=$1
+              FILE=$2
+              if test "$KIND" = custom; then
+                cp -fp "$WORK/original/$FILE" "$CUSTOM_LIB/$FILE"
+              else
+                cp -fp "$OFFICIAL_LIB/$FILE" "$CUSTOM_LIB/$FILE"
+              fi
             }
 
-            test_static()
+            build_probe()
             {
               LABEL=$1
-              PTHREAD_KIND=$2
-              cp -fp "$WORK/$PTHREAD_KIND/libwinpthread-1.dll" .
-              echo "=== static $LABEL ==="
-              sha256sum libwinpthread-1.dll
-              /usr/bin/timeout --kill-after=5s 20s ldd runtime-smoke-static.exe || true
+              DLLCRT_KIND=$2
+              MINGW_KIND=$3
+              select_component "$DLLCRT_KIND" dllcrt2.o
+              select_component "$MINGW_KIND" libmingw32.a
+              echo "=== build $LABEL dllcrt=$DLLCRT_KIND libmingw32=$MINGW_KIND ==="
+              sha256sum "$CUSTOM_LIB/dllcrt2.o" "$CUSTOM_LIB/libmingw32.a"
               set +e
-              OUTPUT=$(./runtime-smoke-static.exe 2>&1)
+              "$BIN/gcc.exe" -fno-use-linker-plugin -O0 -g0 -shared \
+                -Wl,--no-insert-timestamp probe.c -o "probe-$LABEL.dll" \
+                >"build-$LABEL.log" 2>&1
               STATUS=$?
               set -e
-              printf 'static %s status: %s output: <%s>\n' \
-                "$LABEL" "$STATUS" "$OUTPUT"
-              set +e
-              cmd.exe /d /c 'runtime-smoke-static.exe & echo native-status:%ERRORLEVEL%'
-              CMD_STATUS=$?
-              set -e
-              echo "static $LABEL cmd-status: $CMD_STATUS"
+              printf 'build %s status: %s\n' "$LABEL" "$STATUS"
+              cat "build-$LABEL.log"
+              if test "$STATUS" -eq 0; then
+                sha256sum "probe-$LABEL.dll"
+                /ucrt64/bin/objdump.exe -p "probe-$LABEL.dll" |
+                  sed -n '/The Import Tables/,/The Function Table/p' || true
+              else
+                rm -f "probe-$LABEL.dll"
+              fi
             }
 
-            test_dynamic CCC custom custom custom
-            test_dynamic OCC official custom custom
-            test_dynamic COC custom official custom
-            test_dynamic CCO custom custom official
-            test_dynamic OOC official official custom
-            test_dynamic OCO official custom official
-            test_dynamic COO custom official official
-            test_dynamic OOO official official official
+            build_probe CC custom custom
+            build_probe CO custom official
+            build_probe OC official custom
+            build_probe OO official official
+            restore_custom
+            trap - EXIT
 
-            test_static custom-pthread custom
-            test_static official-pthread official
+            /ucrt64/bin/gcc.exe -O2 -Wall -Wextra -Werror -static \
+              loader.c -o loader.exe
+            sha256sum loader.exe
+            /ucrt64/bin/objdump.exe -p loader.exe |
+              sed -n '/The Import Tables/,/The Function Table/p' || true
+
+            DLLS=()
+            for dll in probe-CC.dll probe-CO.dll probe-OC.dll probe-OO.dll; do
+              if test -f "$dll"; then
+                DLLS+=("$dll")
+              fi
+            done
+
+            echo '=== native LoadLibraryA results ==='
+            set +e
+            /c/Windows/System32/cmd.exe /d /c \
+              "loader.exe ${DLLS[*]} & echo native-status:%ERRORLEVEL%"
+            CMD_STATUS=$?
+            set -e
+            echo "cmd-status: $CMD_STATUS"
           } 2>&1 | tee "$LOG"
 
-      - name: upload runtime matrix log
+      - name: upload DLL startup A-B log
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ucrt-runtime-matrix-log
-          path: ${{ runner.temp }}/ucrt-runtime-matrix.log
+          name: ucrt-dll-startup-ab-log
+          path: ${{ runner.temp }}/ucrt-dll-startup-ab.log
           if-no-files-found: error
