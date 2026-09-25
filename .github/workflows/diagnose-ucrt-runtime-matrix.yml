@@ -43,6 +43,7 @@ jobs:
         run: |
           set -uo pipefail
           TEMP_ROOT=$(cygpath -u "$RUNNER_TEMP")
+          WORKSPACE=$(cygpath -u "$GITHUB_WORKSPACE")
           ARTIFACT_ROOT=$TEMP_ROOT/toolchain-artifact
           EXTRACT_ROOT=$TEMP_ROOT/toolchain-startup-ab
           LOG=$TEMP_ROOT/ucrt-dll-startup-ab.log
@@ -53,6 +54,7 @@ jobs:
           tar -xjf "$TB2" -C "$EXTRACT_ROOT" || exit 1
 
           TOOLCHAIN=$EXTRACT_ROOT/x86_64-w64-mingw32-msys2
+          bash "$WORKSPACE/mingw64-runtime-dlls.sh" "$TOOLCHAIN" /ucrt64 || exit 1
           BIN=$TOOLCHAIN/bin
           CUSTOM_LIB=$TOOLCHAIN/x86_64-w64-mingw32/lib
           OFFICIAL_LIB=/ucrt64/lib
