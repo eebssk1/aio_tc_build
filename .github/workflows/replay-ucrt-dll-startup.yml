@@ -1,0 +1,94 @@
+name: Diagnose UCRT64 DLL startup
+
+on:
+  push:
+    branches: [ diagnose-ucrt-final-smoke ]
+    paths: [ .github/workflows/replay-ucrt-dll-startup.yml ]
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  dll-startup:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: MSYS
+          install: mingw-w64-ucrt-x86_64-toolchain mingw-w64-x86_64-toolchain bash bzip2 tar gmp-devel mpfr-devel mpc-devel isl-devel zlib-devel libzstd-devel
+          update: true
+          release: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: ucrt64-failed-installed-toolchain
+          path: ${{ runner.temp }}/ucrt64-artifact
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: '36224783995'
+      - name: compare native DLL entrypoints and runtime
+        shell: msys2 {0}
+        run: |
+          set -euo pipefail
+          TEMP_ROOT=$(cygpath -u "$RUNNER_TEMP")
+          LOG=$TEMP_ROOT/ucrt64-dll-startup.log
+          : > "$LOG"
+          {
+            ROOT=$TEMP_ROOT/ucrt64-dll-diagnostic
+            mkdir -p "$ROOT"
+            TB2=$(find "$TEMP_ROOT/ucrt64-artifact" -maxdepth 1 -name '*.tb2' -print -quit)
+            test -n "$TB2"
+            tar -xjf "$TB2" -C "$ROOT"
+            TC=$ROOT/x86_64-w64-mingw32-msys2
+            RUNTIME=$TC/x86_64-w64-mingw32/runtime
+            while IFS= read -r DIR; do
+              if [ -f "$DIR/libgcc_s_seh-1.dll" ]; then cp -fp /ucrt64/bin/libgcc_s_seh-1.dll "$DIR/libgcc_s_seh-1.dll"; fi
+            done < <(find "$TC" -type f -iname '*.exe' -printf '%h\n' | sort -u)
+            PLUGIN=$(find "$TC/libexec" -name liblto_plugin.dll -print -quit)
+            HOST_PLUGIN=$(find /ucrt64/lib/gcc/x86_64-w64-mingw32 -type f -name liblto_plugin.dll -print -quit)
+            cp -fp "$HOST_PLUGIN" "$PLUGIN"
+            export PATH="$TC/bin:/usr/bin"
+            unset CC CXX CFLAGS CXXFLAGS CPPFLAGS LDFLAGS CPATH C_INCLUDE_PATH CPLUS_INCLUDE_PATH LIBRARY_PATH GCC_EXEC_PREFIX COMPILER_PATH
+            WORK=$TEMP_ROOT/ucrt64-dll-probe
+            mkdir -p "$WORK"
+            cd "$WORK"
+            cp -p "$RUNTIME"/*.dll .
+            for DLL in libgcc_s_seh-1.dll libstdc++-6.dll libwinpthread-1.dll; do cp -fp "/ucrt64/bin/$DLL" .; done
+            cat > shared.c <<'EOF'
+          __declspec(dllexport) int shared_answer(void) { return 42; }
+          EOF
+            cat > main.c <<'EOF'
+          #include <stdio.h>
+          __declspec(dllimport) int shared_answer(void);
+          int main(void) { if (shared_answer()!=42) return 1; puts("dll-ok"); return 0; }
+          EOF
+            gcc.exe -shared shared.c -Wl,--out-implib,libcustom.dll.a -o custom.dll
+            gcc.exe main.c -L. -lcustom -o custom-client.exe
+            /ucrt64/bin/gcc.exe -shared shared.c -Wl,--out-implib,libofficial.dll.a -o official.dll
+            gcc.exe main.c -L. -lofficial -o official-client.exe
+            echo 'CRT archive and startup object hashes:'
+            for FILE in "$TC/x86_64-w64-mingw32/lib/dllcrt2.o" "$TC/x86_64-w64-mingw32/lib/crt2.o" /ucrt64/x86_64-w64-mingw32/lib/dllcrt2.o /ucrt64/x86_64-w64-mingw32/lib/crt2.o; do
+              if [ -f "$FILE" ]; then sha256sum "$FILE"; fi
+            done
+            for FILE in custom.dll official.dll custom-client.exe official-client.exe; do
+              echo "=== $FILE imports and PE header ==="
+              objdump.exe -p "$FILE" | sed -n '/DLL Name:/p;/AddressOfEntryPoint/p'
+              /usr/bin/timeout --kill-after=5s 12s ldd "$FILE" || true
+            done
+            set +e
+            for FILE in custom-client.exe official-client.exe; do
+              OUTPUT=$(./"$FILE" 2>&1)
+              STATUS=$?
+              printf '%s exit=%s output=<%s>\n' "$FILE" "$STATUS" "$OUTPUT"
+            done
+            set -e
+          } 2>&1 | tee "$LOG"
+          exit ${PIPESTATUS[0]}
+      - name: upload diagnostic log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ucrt64-dll-startup-trace
+          path: ${{ runner.temp }}/ucrt64-dll-startup.log
+          if-no-files-found: warn
+          retention-days: 14
