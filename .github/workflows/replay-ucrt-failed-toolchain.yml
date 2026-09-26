@@ -57,6 +57,46 @@ jobs:
           set -e
           echo "Original smoke exit status: $status"
           exit "$status"
+      - name: diagnose GCC driver loader after original failure
+        if: failure()
+        shell: msys2 {0}
+        run: |
+          set -uo pipefail
+          TEMP_ROOT=$(cygpath -u "$RUNNER_TEMP")
+          BIN=$TEMP_ROOT/ucrt64-installed/x86_64-w64-mingw32-msys2/bin
+          LOG=$TEMP_ROOT/ucrt64-replay-smoke.log
+          {
+            set -x
+            echo 'driver and DLL hashes / direct imports:'
+            sha256sum "$BIN/gcc.exe" "$BIN/g++.exe" "$BIN/libgcc_s_seh-1.dll" "$BIN/libwinpthread-1.dll" /ucrt64/bin/libgcc_s_seh-1.dll /ucrt64/bin/libwinpthread-1.dll
+            /ucrt64/bin/objdump.exe -p "$BIN/gcc.exe" | sed -n 's/.*DLL Name: //p'
+            echo 'driver dependencies as resolved by ldd:'
+            /usr/bin/timeout --kill-after=5s 20s ldd "$BIN/gcc.exe" || true
+            export PATH="$BIN:/usr/bin"
+            echo 'packaged driver under isolated PATH:'
+            gcc.exe -dumpmachine
+            echo "gcc status: $?"
+            g++.exe -dumpmachine
+            echo "g++ status: $?"
+            "$BIN/gcc.exe" --version
+            echo "absolute gcc status: $?"
+            echo 'official UCRT64 driver under isolated PATH:'
+            /ucrt64/bin/gcc.exe -dumpmachine
+            echo "official gcc status: $?"
+            echo 'A/B: replace only host libgcc DLL, then retry (original smoke already failed):'
+            cp -fp /ucrt64/bin/libgcc_s_seh-1.dll "$BIN/libgcc_s_seh-1.dll"
+            gcc.exe -dumpmachine
+            echo "official host libgcc status: $?"
+            echo 'A/B: replace also host pthread DLL, then retry:'
+            cp -fp /ucrt64/bin/libwinpthread-1.dll "$BIN/libwinpthread-1.dll"
+            gcc.exe -dumpmachine
+            echo "official host libgcc+pthread status: $?"
+            echo 'Other direct driver imports and bundled DLL hashes:'
+            /ucrt64/bin/objdump.exe -p "$BIN/gcc.exe" | sed -n 's/.*DLL Name: //p' | while IFS= read -r dll; do
+              if [ -f "$BIN/$dll" ]; then sha256sum "$BIN/$dll"; fi
+              if [ -f "/ucrt64/bin/$dll" ]; then sha256sum "/ucrt64/bin/$dll"; fi
+            done
+          } 2>&1 | tee -a "$LOG"
       - name: upload full smoke trace
         if: always()
         uses: actions/upload-artifact@v4
