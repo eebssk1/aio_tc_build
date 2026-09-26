@@ -26,7 +26,7 @@ jobs:
           path: ${{ runner.temp }}/ucrt64-artifact
           github-token: ${{ secrets.GITHUB_TOKEN }}
           run-id: '36224783995'
-      - name: compare native DLL entrypoints and runtime
+      - name: A/B DLL startup object under Windows
         shell: msys2 {0}
         run: |
           set -euo pipefail
@@ -34,7 +34,7 @@ jobs:
           LOG=$TEMP_ROOT/ucrt64-dll-startup.log
           : > "$LOG"
           {
-            ROOT=$TEMP_ROOT/ucrt64-dll-diagnostic
+            ROOT=$TEMP_ROOT/ucrt64-dll-startup-ab
             mkdir -p "$ROOT"
             TB2=$(find "$TEMP_ROOT/ucrt64-artifact" -maxdepth 1 -name '*.tb2' -print -quit)
             test -n "$TB2"
@@ -49,7 +49,7 @@ jobs:
             cp -fp "$HOST_PLUGIN" "$PLUGIN"
             export PATH="$TC/bin:/usr/bin"
             unset CC CXX CFLAGS CXXFLAGS CPPFLAGS LDFLAGS CPATH C_INCLUDE_PATH CPLUS_INCLUDE_PATH LIBRARY_PATH GCC_EXEC_PREFIX COMPILER_PATH
-            WORK=$TEMP_ROOT/ucrt64-dll-probe
+            WORK=$TEMP_ROOT/ucrt64-dll-object-probe
             mkdir -p "$WORK"
             cd "$WORK"
             cp -p "$RUNTIME"/*.dll .
@@ -62,26 +62,31 @@ jobs:
           __declspec(dllimport) int shared_answer(void);
           int main(void) { if (shared_answer()!=42) return 1; puts("dll-ok"); return 0; }
           EOF
+            OFFICIAL_START=$(/ucrt64/bin/gcc.exe -print-file-name=dllcrt2.o)
+            PACKAGED_START=$(gcc.exe -print-file-name=dllcrt2.o)
+            echo "packaged startup: $PACKAGED_START"
+            echo "official startup: $OFFICIAL_START"
+            test -f "$PACKAGED_START" && test -f "$OFFICIAL_START"
+            sha256sum "$PACKAGED_START" "$OFFICIAL_START"
+            cp -p "$PACKAGED_START" packaged-dllcrt2.o
             gcc.exe -shared shared.c -Wl,--out-implib,libcustom.dll.a -o custom.dll
             gcc.exe main.c -L. -lcustom -o custom-client.exe
+            cp -fp "$OFFICIAL_START" "$PACKAGED_START"
+            gcc.exe -shared shared.c -Wl,--out-implib,libswapped.dll.a -o swapped.dll
+            gcc.exe main.c -L. -lswapped -o swapped-client.exe
             /ucrt64/bin/gcc.exe -shared shared.c -Wl,--out-implib,libofficial.dll.a -o official.dll
             gcc.exe main.c -L. -lofficial -o official-client.exe
-            echo 'CRT archive and startup object hashes:'
-            for FILE in "$TC/x86_64-w64-mingw32/lib/dllcrt2.o" "$TC/x86_64-w64-mingw32/lib/crt2.o" /ucrt64/x86_64-w64-mingw32/lib/dllcrt2.o /ucrt64/x86_64-w64-mingw32/lib/crt2.o; do
-              if [ -f "$FILE" ]; then sha256sum "$FILE"; fi
+            for FILE in custom.dll swapped.dll official.dll; do
+              echo "=== $FILE entrypoint/imports ==="
+              /ucrt64/bin/objdump.exe -p "$FILE" | sed -n '/AddressOfEntryPoint/p;/DLL Name:/p'
             done
-            for FILE in custom.dll official.dll custom-client.exe official-client.exe; do
-              echo "=== $FILE imports and PE header ==="
-              objdump.exe -p "$FILE" | sed -n '/DLL Name:/p;/AddressOfEntryPoint/p'
-              /usr/bin/timeout --kill-after=5s 12s ldd "$FILE" || true
-            done
-            set +e
-            for FILE in custom-client.exe official-client.exe; do
-              OUTPUT=$(./"$FILE" 2>&1)
+            for EXE in custom-client.exe swapped-client.exe official-client.exe; do
+              set +e
+              OUTPUT=$(./"$EXE" 2>&1)
               STATUS=$?
-              printf '%s exit=%s output=<%s>\n' "$FILE" "$STATUS" "$OUTPUT"
+              set -e
+              printf '%s exit=%s output=<%s>\n' "$EXE" "$STATUS" "$OUTPUT"
             done
-            set -e
           } 2>&1 | tee "$LOG"
           exit ${PIPESTATUS[0]}
       - name: upload diagnostic log
