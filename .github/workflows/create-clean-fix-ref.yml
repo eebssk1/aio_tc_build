@@ -13,17 +13,25 @@ jobs:
         with:
           fetch-depth: 0
       - name: Create clean fix branch only if it does not exist
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
         run: |
-          set -euo pipefail
+          exec > >(tee "$RUNNER_TEMP/create-clean-ref.log") 2>&1
+          set -euxo pipefail
           BASE=822de0e7f9ac1707868f6e94874cfcb9c34cfcf1
           BRANCH=fix/msys-native-toolchains-clean
+          git rev-parse "$BASE^{commit}"
+          git show -s --format=%s "$BASE"
           test "$(git rev-parse "$BASE^{commit}")" = "$BASE"
           test "$(git show -s --format=%s "$BASE")" = 'disable linker plugin in MinGW UTF-8 relocatable link'
           if git ls-remote --exit-code origin "refs/heads/$BRANCH"; then
             echo 'Ref already exists; refusing to replace it' >&2
             exit 1
           fi
-          git -c http.extraheader="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)" push origin "$BASE:refs/heads/$BRANCH"
+          git push origin "$BASE:refs/heads/$BRANCH"
           test "$(git ls-remote origin "refs/heads/$BRANCH" | cut -f1)" = "$BASE"
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: clean-ref-create-log
+          path: ${{ runner.temp }}/create-clean-ref.log
+          if-no-files-found: warn
