@@ -11,6 +11,7 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 25
     steps:
+      - uses: actions/checkout@v4
       - uses: msys2/setup-msys2@v2
         with:
           msystem: MSYS
@@ -27,6 +28,7 @@ jobs:
         run: |
           set -euo pipefail
           ROOT=$(cygpath -u "$RUNNER_TEMP")
+          WORKSPACE=$(cygpath -u "$GITHUB_WORKSPACE")
           LOG=$ROOT/crt-pair.log
           : > "$LOG"
           {
@@ -34,28 +36,18 @@ jobs:
             tar -xjf "$ROOT/artifact/ucrt64-failed-toolchain.tb2" -C "$ROOT/pair"
             TC=$ROOT/pair/x86_64-w64-mingw32-msys2
             LIB=$TC/x86_64-w64-mingw32/lib
-            for F in dllcrt2.o libmingw32.a; do sha256sum "$LIB/$F" "/ucrt64/lib/$F"; done
+            RUNTIME=$TC/x86_64-w64-mingw32/runtime
+            echo 'original CRT/runtime hashes:'
+            sha256sum "$LIB/dllcrt2.o" "$LIB/libmingw32.a" "$RUNTIME"/*.dll
             while IFS= read -r DIR; do
               test ! -f "$DIR/libgcc_s_seh-1.dll" || cp -fp /ucrt64/bin/libgcc_s_seh-1.dll "$DIR/libgcc_s_seh-1.dll"
             done < <(find "$TC" -type f -iname '*.exe' -printf '%h\n' | sort -u)
             cp -fp "$(find /ucrt64/lib/gcc/x86_64-w64-mingw32 -name liblto_plugin.dll -print -quit)" "$(find "$TC/libexec" -name liblto_plugin.dll -print -quit)"
-            export PATH="$TC/bin:/usr/bin"
-            unset CPATH C_INCLUDE_PATH CPLUS_INCLUDE_PATH LIBRARY_PATH GCC_EXEC_PREFIX COMPILER_PATH
-            mkdir -p "$ROOT/probe"
-            cd "$ROOT/probe"
-            printf '__declspec(dllexport) int answer(void) { return 42; }\n' > shared.c
-            printf '#include <stdio.h>\n__declspec(dllimport) int answer(void); int main(void) { if(answer()!=42)return 1; puts("dll-ok"); return 0; }\n' > client.c
-            run_case() {
-              gcc.exe -shared shared.c -Wl,--out-implib,libprobe.dll.a -o probe.dll
-              gcc.exe client.c -L. -lprobe -o client.exe
-              set +e
-              OUTPUT=$(./client.exe 2>&1); STATUS=$?
-              set -e
-              printf '%s status=%s output=<%s>\n' "$1" "$STATUS" "$OUTPUT"
-            }
-            run_case original-pair
             cp -fp /ucrt64/lib/dllcrt2.o /ucrt64/lib/libmingw32.a "$LIB/"
-            run_case official-pair
+            for DLL in libgcc_s_seh-1.dll libstdc++-6.dll libwinpthread-1.dll; do cp -fp "/ucrt64/bin/$DLL" "$RUNTIME/$DLL"; done
+            echo 'A/B CRT/runtime hashes:'
+            sha256sum "$LIB/dllcrt2.o" "$LIB/libmingw32.a" "$RUNTIME"/*.dll
+            bash -x "$WORKSPACE/mingw64-smoke.sh" "$TC"
           } 2>&1 | tee "$LOG"
           exit ${PIPESTATUS[0]}
       - if: always()
