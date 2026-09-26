@@ -1,0 +1,78 @@
+name: Replay UCRT64 host libgcc adjacency
+
+on:
+  push:
+    branches: [ diagnose-ucrt-final-smoke ]
+    paths: [ .github/workflows/replay-ucrt-adjacent-libgcc.yml ]
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  adjacency:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: MSYS
+          install: mingw-w64-ucrt-x86_64-toolchain mingw-w64-x86_64-toolchain bash bzip2 tar gmp-devel mpfr-devel mpc-devel isl-devel zlib-devel libzstd-devel
+          update: true
+          release: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: ucrt64-failed-installed-toolchain
+          path: ${{ runner.temp }}/ucrt64-artifact
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: '36224783995'
+      - name: compare host DLLs then test fully repaired host closure
+        shell: msys2 {0}
+        run: |
+          set -euo pipefail
+          TEMP_ROOT=$(cygpath -u "$RUNNER_TEMP")
+          WORKSPACE=$(cygpath -u "$GITHUB_WORKSPACE")
+          LOG=$TEMP_ROOT/ucrt64-adjacent-libgcc.log
+          : > "$LOG"
+          {
+            ROOT=$TEMP_ROOT/ucrt64-adjacent-installed
+            mkdir -p "$ROOT"
+            TB2=$(find "$TEMP_ROOT/ucrt64-artifact" -maxdepth 1 -name '*.tb2' -print -quit)
+            test -n "$TB2"
+            tar -xjf "$TB2" -C "$ROOT"
+            TC=$ROOT/x86_64-w64-mingw32-msys2
+            RUNTIME=$TC/x86_64-w64-mingw32/runtime
+            OFFICIAL=/ucrt64/bin/libgcc_s_seh-1.dll
+            BEFORE=$(sha256sum "$RUNTIME/libgcc_s_seh-1.dll" | cut -d' ' -f1)
+            echo "target runtime libgcc hash before: $BEFORE"
+            PLUGIN=$(find "$TC/libexec" -name liblto_plugin.dll -print -quit)
+            test -f "$PLUGIN"
+            echo "plugin: $PLUGIN"
+            /ucrt64/bin/objdump.exe -p "$PLUGIN" | sed -n 's/.*DLL Name: //p'
+            /usr/bin/timeout --kill-after=5s 20s ldd "$PLUGIN" || true
+            echo 'Replace libgcc ONLY beside installed host executables:'
+            while IFS= read -r DIR; do
+              if [ -f "$DIR/libgcc_s_seh-1.dll" ]; then
+                sha256sum "$DIR/libgcc_s_seh-1.dll" "$OFFICIAL"
+                cp -fp "$OFFICIAL" "$DIR/libgcc_s_seh-1.dll"
+                echo "replaced host libgcc at $DIR"
+              fi
+            done < <(find "$TC" -type f -iname '*.exe' -printf '%h\n' | sort -u)
+            AFTER=$(sha256sum "$RUNTIME/libgcc_s_seh-1.dll" | cut -d' ' -f1)
+            echo "target runtime libgcc hash after: $AFTER"
+            test "$BEFORE" = "$AFTER"
+            echo 'plugin dependency resolution after host repair:'
+            /usr/bin/timeout --kill-after=5s 20s ldd "$PLUGIN" || true
+            echo 'run original full native smoke against repaired host closure:'
+            bash -x "$WORKSPACE/mingw64-smoke.sh" "$TC"
+          } 2>&1 | tee "$LOG"
+          exit ${PIPESTATUS[0]}
+      - name: upload diagnostic log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ucrt64-adjacent-libgcc-trace
+          path: ${{ runner.temp }}/ucrt64-adjacent-libgcc.log
+          if-no-files-found: warn
+          retention-days: 14
