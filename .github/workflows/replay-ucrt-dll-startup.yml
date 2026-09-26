@@ -26,7 +26,7 @@ jobs:
           path: ${{ runner.temp }}/ucrt64-artifact
           github-token: ${{ secrets.GITHUB_TOKEN }}
           run-id: '36224783995'
-      - name: A/B DLL startup object under Windows
+      - name: A/B explicit UCRT against installed sysroot
         shell: msys2 {0}
         run: |
           set -euo pipefail
@@ -34,7 +34,7 @@ jobs:
           LOG=$TEMP_ROOT/ucrt64-dll-startup.log
           : > "$LOG"
           {
-            ROOT=$TEMP_ROOT/ucrt64-dll-startup-ab
+            ROOT=$TEMP_ROOT/ucrt64-mcrtdll-ab
             mkdir -p "$ROOT"
             TB2=$(find "$TEMP_ROOT/ucrt64-artifact" -maxdepth 1 -name '*.tb2' -print -quit)
             test -n "$TB2"
@@ -49,7 +49,7 @@ jobs:
             cp -fp "$HOST_PLUGIN" "$PLUGIN"
             export PATH="$TC/bin:/usr/bin"
             unset CC CXX CFLAGS CXXFLAGS CPPFLAGS LDFLAGS CPATH C_INCLUDE_PATH CPLUS_INCLUDE_PATH LIBRARY_PATH GCC_EXEC_PREFIX COMPILER_PATH
-            WORK=$TEMP_ROOT/ucrt64-dll-object-probe
+            WORK=$TEMP_ROOT/ucrt64-mcrtdll-probe
             mkdir -p "$WORK"
             cd "$WORK"
             cp -p "$RUNTIME"/*.dll .
@@ -62,30 +62,29 @@ jobs:
           __declspec(dllimport) int shared_answer(void);
           int main(void) { if (shared_answer()!=42) return 1; puts("dll-ok"); return 0; }
           EOF
-            OFFICIAL_START=$(/ucrt64/bin/gcc.exe -print-file-name=dllcrt2.o)
-            PACKAGED_START=$(gcc.exe -print-file-name=dllcrt2.o)
-            echo "packaged startup: $PACKAGED_START"
-            echo "official startup: $OFFICIAL_START"
-            test -f "$PACKAGED_START" && test -f "$OFFICIAL_START"
-            sha256sum "$PACKAGED_START" "$OFFICIAL_START"
-            cp -p "$PACKAGED_START" packaged-dllcrt2.o
-            gcc.exe -shared shared.c -Wl,--out-implib,libcustom.dll.a -o custom.dll
-            gcc.exe main.c -L. -lcustom -o custom-client.exe
-            cp -fp "$OFFICIAL_START" "$PACKAGED_START"
-            gcc.exe -shared shared.c -Wl,--out-implib,libswapped.dll.a -o swapped.dll
-            gcc.exe main.c -L. -lswapped -o swapped-client.exe
-            /ucrt64/bin/gcc.exe -shared shared.c -Wl,--out-implib,libofficial.dll.a -o official.dll
-            gcc.exe main.c -L. -lofficial -o official-client.exe
-            for FILE in custom.dll swapped.dll official.dll; do
-              echo "=== $FILE entrypoint/imports ==="
-              /ucrt64/bin/objdump.exe -p "$FILE" | sed -n '/AddressOfEntryPoint/p;/DLL Name:/p'
-            done
-            for EXE in custom-client.exe swapped-client.exe official-client.exe; do
-              set +e
-              OUTPUT=$(./"$EXE" 2>&1)
-              STATUS=$?
-              set -e
-              printf '%s exit=%s output=<%s>\n' "$EXE" "$STATUS" "$OUTPUT"
+            cat > cxx.cc <<'EOF'
+          #include <iostream>
+          int main() { std::cout << "cxx-ok\n"; }
+          EOF
+            echo 'default versus explicit UCRT compiler specs:'
+            gcc.exe -dumpspecs | sed -n '/^\*libgcc:/,+2p;/^\*lib:/,+2p'
+            for KIND in default ucrt; do
+              EXTRA=()
+              if [ "$KIND" = ucrt ]; then EXTRA=(-mcrtdll=ucrt); fi
+              gcc.exe "${EXTRA[@]}" -shared shared.c -Wl,--out-implib,"lib$KIND.dll.a" -o "$KIND.dll"
+              gcc.exe "${EXTRA[@]}" main.c -L. "-l$KIND" -o "$KIND-client.exe"
+              g++.exe "${EXTRA[@]}" cxx.cc -o "$KIND-cxx.exe"
+              for FILE in "$KIND.dll" "$KIND-client.exe" "$KIND-cxx.exe"; do
+                echo "=== $FILE imports ==="
+                /ucrt64/bin/objdump.exe -p "$FILE" | sed -n '/DLL Name:/p'
+                if [[ "$FILE" = *.exe ]]; then
+                  set +e
+                  OUTPUT=$(./"$FILE" 2>&1)
+                  STATUS=$?
+                  set -e
+                  printf '%s exit=%s output=<%s>\n' "$FILE" "$STATUS" "$OUTPUT"
+                fi
+              done
             done
           } 2>&1 | tee "$LOG"
           exit ${PIPESTATUS[0]}
