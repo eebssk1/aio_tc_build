@@ -1,0 +1,128 @@
+name: Probe pinned new UCRT release on Windows
+on:
+  push:
+    branches: [ diagnose-ucrt-final-smoke ]
+    paths: [ .github/workflows/probe-ucrt-new-crt.yml ]
+permissions:
+  actions: read
+  contents: read
+jobs:
+  probe:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: MSYS
+          install: mingw-w64-ucrt-x86_64-toolchain bash bzip2 tar
+          update: true
+          release: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: ucrt64-failed-installed-toolchain
+          path: ${{ runner.temp }}/artifact
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: '36224783995'
+      - name: Verify new CRT DLL startup and pthread natively
+        shell: msys2 {0}
+        run: |
+          set -euo pipefail
+          ROOT=$(cygpath -u "$RUNNER_TEMP")
+          LOG="$ROOT/new-crt-probe.log"
+          : > "$LOG"
+          {
+            mkdir -p "$ROOT/new-crt-tree" "$ROOT/new-crt-tc" "$ROOT/new-crt-probe/old-pthread" "$ROOT/new-crt-probe/new-pthread"
+            curl -fL --retry 3 --max-time 300 'https://github.com/eebssk1/mingw-crt-build/releases/download/12a6086c/mingw-crt.tgz' -o "$ROOT/new-crt.tgz"
+            echo '24ceae5277d7f109a31d324334882bbb0fa1109a5277ddbcac783429817a568b  '"$ROOT/new-crt.tgz" | sha256sum -c -
+            tar -xzf "$ROOT/new-crt.tgz" -C "$ROOT/new-crt-tree"
+            NEW="$ROOT/new-crt-tree/mingw-crt/ucrt64"
+            test -f "$NEW/lib/dllcrt2.o" && test -f "$NEW/lib/libmingw32.a"
+            if [ -f "$NEW/bin/libwinpthread-1.dll" ]; then
+              NEW_PTHREAD="$NEW/bin/libwinpthread-1.dll"
+            else
+              NEW_PTHREAD="$NEW/lib/libwinpthread-1.dll"
+            fi
+            test -f "$NEW_PTHREAD"
+            tar -xjf "$ROOT/artifact/ucrt64-failed-toolchain.tb2" -C "$ROOT/new-crt-tc"
+            TC="$ROOT/new-crt-tc/x86_64-w64-mingw32-msys2"
+            LIB="$TC/x86_64-w64-mingw32/lib"
+            RUNTIME="$TC/x86_64-w64-mingw32/runtime"
+            test -f "$LIB/dllcrt2.o" && test -f "$LIB/libmingw32.a" && test -f "$RUNTIME/libwinpthread-1.dll"
+            # This old artifact predates the host DLL closure fix. Repair host only.
+            while IFS= read -r DIR; do
+              if [ -f "$DIR/libgcc_s_seh-1.dll" ]; then
+                cp -fp /ucrt64/bin/libgcc_s_seh-1.dll "$DIR/libgcc_s_seh-1.dll"
+              fi
+            done < <(find "$TC" -type f -iname '*.exe' -printf '%h\n' | sort -u)
+            PLUGIN=$(find "$TC/libexec" -name liblto_plugin.dll -print -quit)
+            HOST_PLUGIN=$(find /ucrt64/lib/gcc/x86_64-w64-mingw32 -name liblto_plugin.dll -print -quit)
+            test -n "$PLUGIN" && test -n "$HOST_PLUGIN"
+            cp -fp "$HOST_PLUGIN" "$PLUGIN"
+            cd "$ROOT/new-crt-probe"
+            cp -fp "$RUNTIME/libwinpthread-1.dll" old-pthread/
+            cp -fp "$NEW_PTHREAD" new-pthread/
+            cp -fp /ucrt64/bin/libgcc_s_seh-1.dll /ucrt64/bin/libstdc++-6.dll old-pthread/
+            cp -fp /ucrt64/bin/libgcc_s_seh-1.dll /ucrt64/bin/libstdc++-6.dll new-pthread/
+            export PATH=/ucrt64/bin:/usr/bin
+            cat > loader.c <<'EOF'
+          #include <windows.h>
+          #include <stdio.h>
+          int main(int argc, char **argv) {
+            HMODULE h;
+            if (argc != 2) return 2;
+            SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX);
+            h = LoadLibraryA(argv[1]);
+            if (!h) { printf("LoadLibrary %s error=%lu\n", argv[1], (unsigned long)GetLastError()); return 3; }
+            printf("LoadLibrary %s loaded\n", argv[1]);
+            FreeLibrary(h);
+            return 0;
+          }
+          EOF
+            /ucrt64/bin/gcc.exe loader.c -o loader.exe
+            for KIND in old new; do
+              set +e
+              ./loader.exe "$KIND-pthread/libwinpthread-1.dll"
+              STATUS=$?
+              set -e
+              printf '%s pthread load status=%s\n' "$KIND" "$STATUS"
+              if [ "$KIND" = new ]; then test "$STATUS" -eq 0; fi
+            done
+            cat > shared.c <<'EOF'
+          __declspec(dllexport) int shared_answer(void) { return 42; }
+          EOF
+            cat > client.c <<'EOF'
+          #include <stdio.h>
+          __declspec(dllimport) int shared_answer(void);
+          int main(void) { if (shared_answer() != 42) return 1; puts("dll-ok"); return 0; }
+          EOF
+            cp -fp /ucrt64/bin/libgcc_s_seh-1.dll /ucrt64/bin/libstdc++-6.dll /ucrt64/bin/libwinpthread-1.dll .
+            export PATH="$TC/bin:/usr/bin"
+            unset CC CXX CFLAGS CXXFLAGS CPPFLAGS LDFLAGS CPATH C_INCLUDE_PATH CPLUS_INCLUDE_PATH LIBRARY_PATH GCC_EXEC_PREFIX COMPILER_PATH
+            echo 'startup object/archive SHA256: old then new'
+            sha256sum "$LIB/dllcrt2.o" "$LIB/libmingw32.a" "$NEW/lib/dllcrt2.o" "$NEW/lib/libmingw32.a"
+            for KIND in old new; do
+              if [ "$KIND" = new ]; then
+                cp -fp "$NEW/lib/dllcrt2.o" "$NEW/lib/libmingw32.a" "$LIB/"
+              fi
+              gcc.exe -fno-use-linker-plugin -shared shared.c -Wl,--out-implib,"lib$KIND.dll.a" -o "$KIND.dll"
+              gcc.exe -fno-use-linker-plugin client.c -L. "-l$KIND" -o "$KIND-client.exe"
+              set +e
+              ./loader.exe "$KIND.dll"
+              LOAD_STATUS=$?
+              ./"$KIND-client.exe"
+              CLIENT_STATUS=$?
+              set -e
+              printf '%s CRT loader status=%s client status=%s\n' "$KIND" "$LOAD_STATUS" "$CLIENT_STATUS"
+              if [ "$KIND" = new ]; then
+                test "$LOAD_STATUS" -eq 0 && test "$CLIENT_STATUS" -eq 0
+              fi
+            done
+          } 2>&1 | tee "$LOG"
+          exit ${PIPESTATUS[0]}
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pinned-new-ucrt-crt-probe-log
+          path: ${{ runner.temp }}/new-crt-probe.log
+          if-no-files-found: warn
+          retention-days: 14
