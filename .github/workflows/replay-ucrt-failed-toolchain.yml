@@ -98,6 +98,21 @@ jobs:
               if [ -f "/ucrt64/bin/$dll" ]; then sha256sum "/ucrt64/bin/$dll"; fi
             done
           } 2>&1 | tee -a "$LOG"
+      - name: run complete smoke with repaired host libgcc
+        if: failure()
+        shell: msys2 {0}
+        run: |
+          set -uo pipefail
+          TEMP_ROOT=$(cygpath -u "$RUNNER_TEMP")
+          WORKSPACE=$(cygpath -u "$GITHUB_WORKSPACE")
+          TOOLCHAIN=$TEMP_ROOT/ucrt64-installed/x86_64-w64-mingw32-msys2
+          LOG=$TEMP_ROOT/ucrt64-replay-smoke.log
+          cp -fp /ucrt64/bin/libgcc_s_seh-1.dll "$TOOLCHAIN/bin/libgcc_s_seh-1.dll" || exit 1
+          echo 'A/B full smoke: repaired host libgcc; target runtime untouched' | tee -a "$LOG"
+          bash -x "$WORKSPACE/mingw64-smoke.sh" "$TOOLCHAIN" 2>&1 | tee -a "$LOG"
+          status=${PIPESTATUS[0]}
+          echo "Repaired host libgcc full smoke status: $status" | tee -a "$LOG"
+          exit "$status"
       - name: upload full smoke trace
         if: always()
         uses: actions/upload-artifact@v4
