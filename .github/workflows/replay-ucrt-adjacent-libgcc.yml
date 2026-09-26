@@ -27,15 +27,16 @@ jobs:
           path: ${{ runner.temp }}/ucrt64-artifact
           github-token: ${{ secrets.GITHUB_TOKEN }}
           run-id: '36224783995'
-      - name: compare host DLLs then test fully repaired host closure
+      - name: test official plugin with repaired host DLL closure
         shell: msys2 {0}
         run: |
-          set -euo pipefail
+          set -uo pipefail
           TEMP_ROOT=$(cygpath -u "$RUNNER_TEMP")
           WORKSPACE=$(cygpath -u "$GITHUB_WORKSPACE")
           LOG=$TEMP_ROOT/ucrt64-adjacent-libgcc.log
           : > "$LOG"
           {
+            set -e
             ROOT=$TEMP_ROOT/ucrt64-adjacent-installed
             mkdir -p "$ROOT"
             TB2=$(find "$TEMP_ROOT/ucrt64-artifact" -maxdepth 1 -name '*.tb2' -print -quit)
@@ -43,28 +44,22 @@ jobs:
             tar -xjf "$TB2" -C "$ROOT"
             TC=$ROOT/x86_64-w64-mingw32-msys2
             RUNTIME=$TC/x86_64-w64-mingw32/runtime
-            OFFICIAL=/ucrt64/bin/libgcc_s_seh-1.dll
             BEFORE=$(sha256sum "$RUNTIME/libgcc_s_seh-1.dll" | cut -d' ' -f1)
             echo "target runtime libgcc hash before: $BEFORE"
-            PLUGIN=$(find "$TC/libexec" -name liblto_plugin.dll -print -quit)
-            test -f "$PLUGIN"
-            echo "plugin: $PLUGIN"
-            /ucrt64/bin/objdump.exe -p "$PLUGIN" | sed -n 's/.*DLL Name: //p'
-            /usr/bin/timeout --kill-after=5s 20s ldd "$PLUGIN" || true
-            echo 'Replace libgcc ONLY beside installed host executables:'
             while IFS= read -r DIR; do
               if [ -f "$DIR/libgcc_s_seh-1.dll" ]; then
-                sha256sum "$DIR/libgcc_s_seh-1.dll" "$OFFICIAL"
-                cp -fp "$OFFICIAL" "$DIR/libgcc_s_seh-1.dll"
-                echo "replaced host libgcc at $DIR"
+                cp -fp /ucrt64/bin/libgcc_s_seh-1.dll "$DIR/libgcc_s_seh-1.dll"
+                echo "host libgcc repaired: $DIR"
               fi
             done < <(find "$TC" -type f -iname '*.exe' -printf '%h\n' | sort -u)
-            AFTER=$(sha256sum "$RUNTIME/libgcc_s_seh-1.dll" | cut -d' ' -f1)
-            echo "target runtime libgcc hash after: $AFTER"
-            test "$BEFORE" = "$AFTER"
-            echo 'plugin dependency resolution after host repair:'
-            /usr/bin/timeout --kill-after=5s 20s ldd "$PLUGIN" || true
-            echo 'run original full native smoke against repaired host closure:'
+            test "$BEFORE" = "$(sha256sum "$RUNTIME/libgcc_s_seh-1.dll" | cut -d' ' -f1)"
+            PLUGIN=$(find "$TC/libexec" -name liblto_plugin.dll -print -quit)
+            HOST_PLUGIN=$(find /ucrt64/lib/gcc/x86_64-w64-mingw32 -type f -name liblto_plugin.dll -print -quit)
+            test -f "$PLUGIN" && test -f "$HOST_PLUGIN"
+            echo "packaged plugin $PLUGIN; official plugin $HOST_PLUGIN"
+            sha256sum "$PLUGIN" "$HOST_PLUGIN"
+            cp -fp "$HOST_PLUGIN" "$PLUGIN"
+            echo 'full native smoke with official host libgcc and official plugin; target runtimes unchanged:'
             bash -x "$WORKSPACE/mingw64-smoke.sh" "$TC"
           } 2>&1 | tee "$LOG"
           exit ${PIPESTATUS[0]}
