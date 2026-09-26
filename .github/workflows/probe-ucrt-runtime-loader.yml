@@ -31,14 +31,8 @@ jobs:
           : > "$LOG"
           {
             set -x
-            mkdir -p "$ROOT/runtime-loader-tc" "$ROOT/runtime-loader-work/original" "$ROOT/runtime-loader-work/official"
-            tar -xjf "$ROOT/artifact/ucrt64-failed-toolchain.tb2" -C "$ROOT/runtime-loader-tc"
-            TC=$ROOT/runtime-loader-tc/x86_64-w64-mingw32-msys2
-            RUNTIME=$TC/x86_64-w64-mingw32/runtime
-            PLUGIN=$(find "$TC/libexec" -name liblto_plugin.dll -print -quit)
-            OFFICIAL_PLUGIN=$(find /ucrt64/lib/gcc/x86_64-w64-mingw32 -name liblto_plugin.dll -print -quit)
-            printf 'plugin=%s official=%s\n' "$PLUGIN" "$OFFICIAL_PLUGIN"
-            test -f "$PLUGIN" && test -f "$OFFICIAL_PLUGIN"
+            mkdir -p "$ROOT/runtime-loader-work/original" "$ROOT/runtime-loader-work/official" "$ROOT/runtime-loader-tc"
+            export PATH=/ucrt64/bin:/usr/bin
             cd "$ROOT/runtime-loader-work"
             cat > loader.c <<'EOF'
           #include <windows.h>
@@ -52,13 +46,20 @@ jobs:
             printf("LoadLibrary %s loaded\n",argv[1]);FreeLibrary(h);return 0;
           }
           EOF
-            /ucrt64/bin/gcc.exe loader.c -o loader.exe
+            /ucrt64/bin/gcc.exe -v loader.c -o loader.exe
+            tar -xjf "$ROOT/artifact/ucrt64-failed-toolchain.tb2" -C "$ROOT/runtime-loader-tc"
+            TC=$ROOT/runtime-loader-tc/x86_64-w64-mingw32-msys2
+            RUNTIME=$TC/x86_64-w64-mingw32/runtime
+            PLUGIN=$(find "$TC/libexec" -name liblto_plugin.dll -print -quit)
+            OFFICIAL_PLUGIN=$(find /ucrt64/lib/gcc/x86_64-w64-mingw32 -name liblto_plugin.dll -print -quit)
+            test -f "$PLUGIN" && test -f "$OFFICIAL_PLUGIN"
             for DLL in libgcc_s_seh-1.dll libstdc++-6.dll libwinpthread-1.dll libgomp-1.dll; do
               cp -fp "$RUNTIME/$DLL" original/
               cp -fp "/ucrt64/bin/$DLL" official/
             done
             cp -fp "$PLUGIN" original/liblto_plugin.dll
             cp -fp "$OFFICIAL_PLUGIN" official/liblto_plugin.dll
+            set +x
             for KIND in original official; do
               for DLL in libwinpthread-1.dll libgcc_s_seh-1.dll libstdc++-6.dll libgomp-1.dll liblto_plugin.dll; do
                 sha256sum "$KIND/$DLL"
