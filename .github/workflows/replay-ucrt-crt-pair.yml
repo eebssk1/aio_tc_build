@@ -44,7 +44,7 @@ jobs:
             done < <(find "$TC" -type f -iname '*.exe' -printf '%h\n' | sort -u)
             cp -fp "$(find /ucrt64/lib/gcc/x86_64-w64-mingw32 -name liblto_plugin.dll -print -quit)" "$(find "$TC/libexec" -name liblto_plugin.dll -print -quit)"
             cp -fp /ucrt64/lib/dllcrt2.o /ucrt64/lib/libmingw32.a "$LIB/"
-            for DLL in libgcc_s_seh-1.dll libstdc++-6.dll libwinpthread-1.dll; do cp -fp "/ucrt64/bin/$DLL" "$RUNTIME/$DLL"; done
+            for DLL in libgcc_s_seh-1.dll libstdc++-6.dll libwinpthread-1.dll libgomp-1.dll; do cp -fp "/ucrt64/bin/$DLL" "$RUNTIME/$DLL"; done
             echo 'A/B CRT/runtime hashes:'
             sha256sum "$LIB/dllcrt2.o" "$LIB/libmingw32.a" "$RUNTIME"/*.dll
             bash -x "$WORKSPACE/mingw64-smoke.sh" "$TC"
