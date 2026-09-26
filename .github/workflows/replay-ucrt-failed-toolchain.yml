@@ -1,0 +1,67 @@
+name: Replay failed UCRT64 installed toolchain
+
+on:
+  push:
+    branches: [ diagnose-ucrt-final-smoke ]
+    paths:
+      - .github/workflows/replay-ucrt-failed-toolchain.yml
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: replay-ucrt-failed-toolchain
+  cancel-in-progress: true
+
+jobs:
+  replay:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - name: checkout smoke script
+        uses: actions/checkout@v4
+      - name: setup MSYS shell
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MSYS
+          install: mingw-w64-ucrt-x86_64-toolchain mingw-w64-x86_64-toolchain bash bzip2 tar gmp-devel mpfr-devel mpc-devel isl-devel zlib-devel libzstd-devel
+          update: true
+          release: false
+      - name: download failed installed toolchain
+        uses: actions/download-artifact@v4
+        with:
+          name: ucrt64-failed-installed-toolchain
+          path: ${{ runner.temp }}/ucrt64-artifact
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: '36224783995'
+      - name: run unmodified installed-toolchain smoke with trace
+        shell: msys2 {0}
+        run: |
+          set -euo pipefail
+          TEMP_ROOT=$(cygpath -u "$RUNNER_TEMP")
+          WORKSPACE=$(cygpath -u "$GITHUB_WORKSPACE")
+          ARTIFACT_ROOT=$TEMP_ROOT/ucrt64-artifact
+          EXTRACT_ROOT=$TEMP_ROOT/ucrt64-installed
+          SMOKE_LOG=$TEMP_ROOT/ucrt64-replay-smoke.log
+          TB2=$(find "$ARTIFACT_ROOT" -maxdepth 1 -type f -name '*.tb2' -print -quit)
+          test -n "$TB2"
+          mkdir -p "$EXTRACT_ROOT"
+          tar -xjf "$TB2" -C "$EXTRACT_ROOT"
+          TOOLCHAIN=$EXTRACT_ROOT/x86_64-w64-mingw32-msys2
+          test -d "$TOOLCHAIN"
+          echo "Replaying original installed toolchain: $TOOLCHAIN"
+          set +e
+          bash -x "$WORKSPACE/mingw64-smoke.sh" "$TOOLCHAIN" 2>&1 | tee "$SMOKE_LOG"
+          status=${PIPESTATUS[0]}
+          set -e
+          echo "Original smoke exit status: $status"
+          exit "$status"
+      - name: upload full smoke trace
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ucrt64-replay-smoke-trace
+          path: ${{ runner.temp }}/ucrt64-replay-smoke.log
+          if-no-files-found: warn
+          retention-days: 14

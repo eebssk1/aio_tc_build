@@ -3,6 +3,8 @@ name: Diagnose UCRT64 final smoke
 on:
   push:
     branches: [ diagnose-ucrt-final-smoke ]
+    paths:
+      - build-ucrt-diagnostic.sh
   workflow_dispatch:
 
 concurrency:
