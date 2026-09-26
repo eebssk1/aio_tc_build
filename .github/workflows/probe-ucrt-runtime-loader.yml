@@ -30,12 +30,14 @@ jobs:
           LOG=$ROOT/ucrt-runtime-loader.log
           : > "$LOG"
           {
+            set -x
             mkdir -p "$ROOT/runtime-loader-tc" "$ROOT/runtime-loader-work/original" "$ROOT/runtime-loader-work/official"
             tar -xjf "$ROOT/artifact/ucrt64-failed-toolchain.tb2" -C "$ROOT/runtime-loader-tc"
             TC=$ROOT/runtime-loader-tc/x86_64-w64-mingw32-msys2
             RUNTIME=$TC/x86_64-w64-mingw32/runtime
             PLUGIN=$(find "$TC/libexec" -name liblto_plugin.dll -print -quit)
             OFFICIAL_PLUGIN=$(find /ucrt64/lib/gcc/x86_64-w64-mingw32 -name liblto_plugin.dll -print -quit)
+            printf 'plugin=%s official=%s\n' "$PLUGIN" "$OFFICIAL_PLUGIN"
             test -f "$PLUGIN" && test -f "$OFFICIAL_PLUGIN"
             cd "$ROOT/runtime-loader-work"
             cat > loader.c <<'EOF'
@@ -47,8 +49,7 @@ jobs:
             SetErrorMode(SEM_FAILCRITICALERRORS|SEM_NOGPFAULTERRORBOX);
             h=LoadLibraryA(argv[1]);
             if(!h){printf("LoadLibrary %s error=%lu\n",argv[1],(unsigned long)GetLastError());return 3;}
-            printf("LoadLibrary %s loaded\n",argv[1]);
-            FreeLibrary(h);return 0;
+            printf("LoadLibrary %s loaded\n",argv[1]);FreeLibrary(h);return 0;
           }
           EOF
             /ucrt64/bin/gcc.exe loader.c -o loader.exe
@@ -59,10 +60,8 @@ jobs:
             cp -fp "$PLUGIN" original/liblto_plugin.dll
             cp -fp "$OFFICIAL_PLUGIN" official/liblto_plugin.dll
             for KIND in original official; do
-              echo "=== $KIND DLLs, self-contained directory ==="
               for DLL in libwinpthread-1.dll libgcc_s_seh-1.dll libstdc++-6.dll libgomp-1.dll liblto_plugin.dll; do
                 sha256sum "$KIND/$DLL"
-                /ucrt64/bin/objdump.exe -p "$KIND/$DLL" | sed -n 's/.*DLL Name: //p' | sort -fu
                 set +e
                 ./loader.exe "$KIND/$DLL"
                 STATUS=$?
