@@ -1,0 +1,108 @@
+name: Probe UCRT DLL startup object optimization
+on:
+  push:
+    branches: [ diagnose-ucrt-final-smoke ]
+    paths: [ .github/workflows/probe-ucrt-dll-object-opt.yml ]
+permissions:
+  actions: read
+  contents: read
+jobs:
+  probe:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: MSYS
+          install: mingw-w64-ucrt-x86_64-toolchain bash bzip2 tar
+          update: true
+          release: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: ucrt64-failed-installed-toolchain
+          path: ${{ runner.temp }}/artifact
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: '36224783995'
+      - shell: msys2 {0}
+        run: |
+          set -euo pipefail
+          ROOT=$(cygpath -u "$RUNNER_TEMP")
+          LOG="$ROOT/ucrt-dll-object-opt.log"
+          : > "$LOG"
+          {
+            mkdir -p "$ROOT/dll-opt-tc" "$ROOT/dll-opt-work/source"
+            tar -xjf "$ROOT/artifact/ucrt64-failed-toolchain.tb2" -C "$ROOT/dll-opt-tc"
+            TC="$ROOT/dll-opt-tc/x86_64-w64-mingw32-msys2"
+            LIB="$TC/x86_64-w64-mingw32/lib"
+            SRC="$ROOT/dll-opt-work/source"
+            BASE=https://raw.githubusercontent.com/mingw-w64/mingw-w64/4564ee4b5/mingw-w64-crt
+            curl -fsSL --retry 3 "$BASE/crt/crtdll.c" -o "$SRC/crtdll.c"
+            curl -fsSL --retry 3 "$BASE/include/internal.h" -o "$SRC/internal.h"
+            curl -fsSL --retry 3 "$BASE/include/sect_attribs.h" -o "$SRC/sect_attribs.h"
+            printf '%s  %s\n' \
+              '6ebc176a18c1e448528dddd0604587ba18adc48dd2cc312c5edbc4311c4ff24c' "$SRC/crtdll.c" \
+              '862e7c001b31867db98eefabd82a751f5c3809aee22cca1faee6d6f57cd361b9' "$SRC/internal.h" \
+              '2bb9e4ceee95a88cf6e97301319d5d3b78d57d12c57ec9f830af5d510a82fadc' "$SRC/sect_attribs.h" | sha256sum -c -
+            python3 - "$SRC/crtdll.c" <<'PY'
+          import pathlib,sys
+          p=pathlib.Path(sys.argv[1]); s=p.read_text()
+          for old,new in [
+            ('extern void __cdecl __mingw_dll_do_global_ctors (void);\nextern void __cdecl __mingw_dll_do_global_dtors (void);','extern void __main ();'),
+            ('__mingw_dll_do_global_ctors ();','__main ();'),
+            ('  __mingw_dll_do_global_dtors ();\n','')]:
+            if s.count(old)!=1: raise SystemExit('unexpected upstream CRT source for '+old)
+            s=s.replace(old,new)
+          p.write_text(s)
+          PY
+            while IFS= read -r DIR; do
+              if [ -f "$DIR/libgcc_s_seh-1.dll" ]; then cp -fp /ucrt64/bin/libgcc_s_seh-1.dll "$DIR/libgcc_s_seh-1.dll"; fi
+            done < <(find "$TC" -type f -iname '*.exe' -printf '%h\n' | sort -u)
+            export PATH="$TC/bin:/usr/bin"
+            unset CC CXX CFLAGS CXXFLAGS CPPFLAGS LDFLAGS CPATH C_INCLUDE_PATH CPLUS_INCLUDE_PATH LIBRARY_PATH GCC_EXEC_PREFIX COMPILER_PATH
+            cd "$ROOT/dll-opt-work"
+            cat > shared.c <<'EOF'
+          __declspec(dllexport) int shared_answer(void) { return 42; }
+          EOF
+            cat > loader.c <<'EOF'
+          #define WIN32_LEAN_AND_MEAN
+          #include <windows.h>
+          #include <stdio.h>
+          typedef int (*answer_t)(void);
+          int main(int argc, char **argv) {
+            HMODULE dll;
+            answer_t answer;
+            if (argc != 2) return 2;
+            SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX);
+            dll = LoadLibraryA(argv[1]);
+            if (!dll) { printf("%s LoadLibrary error=%lu\n",argv[1],(unsigned long)GetLastError());return 3; }
+            answer=(answer_t)(void *)GetProcAddress(dll,"shared_answer");
+            printf("%s answer=%d\n",argv[1],answer ? answer() : -1);
+            FreeLibrary(dll);return answer ? 0 : 4;
+          }
+          EOF
+            /ucrt64/bin/gcc.exe loader.c -o loader.exe
+            cp -p "$LIB/dllcrt2.o" original.o
+            for KIND in original host-O0 host-O2 host-O3 self-O2; do
+              echo "=== $KIND ==="
+              if [ "$KIND" != original ]; then
+                case "$KIND" in host-O0) CC=/ucrt64/bin/gcc.exe; OPT=-O0;; host-O2) CC=/ucrt64/bin/gcc.exe; OPT=-O2;; host-O3) CC=/ucrt64/bin/gcc.exe; OPT=-O3;; self-O2) CC="$TC/bin/gcc.exe"; OPT=-O2;; esac
+                "$CC" -c "$SRC/crtdll.c" -I"$SRC" -I"$TC/x86_64-w64-mingw32/include" -D_SYSCRT=1 "$OPT" -o "$KIND.o"
+              fi
+              cp -fp "$KIND.o" "$LIB/dllcrt2.o"
+              sha256sum "$LIB/dllcrt2.o"
+              set +e
+              gcc.exe -fno-use-linker-plugin -shared shared.c -o "$KIND.dll" > "$KIND.link.log" 2>&1
+              LINK_STATUS=$?
+              if [ "$LINK_STATUS" -eq 0 ]; then ./loader.exe "$KIND.dll"; LOAD_STATUS=$?; else cat "$KIND.link.log"; LOAD_STATUS=not-linked; fi
+              set -e
+              printf '%s link=%s load=%s\n' "$KIND" "$LINK_STATUS" "$LOAD_STATUS"
+            done
+          } 2>&1 | tee "$LOG"
+          exit ${PIPESTATUS[0]}
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ucrt64-dll-object-opt-log
+          path: ${{ runner.temp }}/ucrt-dll-object-opt.log
+          if-no-files-found: warn
+          retention-days: 14
