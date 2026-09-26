@@ -27,21 +27,24 @@ jobs:
           path: ${{ runner.temp }}/ucrt64-artifact
           github-token: ${{ secrets.GITHUB_TOKEN }}
           run-id: '36224783995'
-      - name: A/B target DLLs without changing installed host or target source
+      - name: run all native tests with official runtime A/B
         shell: msys2 {0}
         run: |
           set -euo pipefail
           TEMP_ROOT=$(cygpath -u "$RUNNER_TEMP")
+          WORKSPACE=$(cygpath -u "$GITHUB_WORKSPACE")
           LOG=$TEMP_ROOT/ucrt64-adjacent-libgcc.log
           : > "$LOG"
           {
-            ROOT=$TEMP_ROOT/ucrt64-target-ab
+            ROOT=$TEMP_ROOT/ucrt64-complete-ab
             mkdir -p "$ROOT"
             TB2=$(find "$TEMP_ROOT/ucrt64-artifact" -maxdepth 1 -name '*.tb2' -print -quit)
             test -n "$TB2"
             tar -xjf "$TB2" -C "$ROOT"
             TC=$ROOT/x86_64-w64-mingw32-msys2
             RUNTIME=$TC/x86_64-w64-mingw32/runtime
+            echo 'Save original target runtime hashes:'
+            sha256sum "$RUNTIME"/*.dll
             while IFS= read -r DIR; do
               if [ -f "$DIR/libgcc_s_seh-1.dll" ]; then cp -fp /ucrt64/bin/libgcc_s_seh-1.dll "$DIR/libgcc_s_seh-1.dll"; fi
             done < <(find "$TC" -type f -iname '*.exe' -printf '%h\n' | sort -u)
@@ -49,46 +52,13 @@ jobs:
             HOST_PLUGIN=$(find /ucrt64/lib/gcc/x86_64-w64-mingw32 -type f -name liblto_plugin.dll -print -quit)
             test -f "$PLUGIN" && test -f "$HOST_PLUGIN"
             cp -fp "$HOST_PLUGIN" "$PLUGIN"
-            export PATH="$TC/bin:/usr/bin"
-            unset CC CXX CFLAGS CXXFLAGS CPPFLAGS LDFLAGS CPATH C_INCLUDE_PATH CPLUS_INCLUDE_PATH LIBRARY_PATH GCC_EXEC_PREFIX COMPILER_PATH
-            WORK=$TEMP_ROOT/ucrt64-cxx-runtime-ab
-            mkdir -p "$WORK"
-            cd "$WORK"
-            cp -p "$RUNTIME"/*.dll .
-            cat > probe.cc <<'EOF'
-          #include <iostream>
-          #include <numeric>
-          #include <vector>
-          int main() {
-            const std::vector<int> v{1,2,3,4};
-            if (std::accumulate(v.begin(), v.end(), 0) != 10) return 1;
-            std::cout << "cxx-ok\n";
-          }
-          EOF
-            g++.exe -std=c++20 -O2 probe.cc -o probe-dynamic.exe
-            g++.exe -std=c++20 -O2 -static-libgcc -static-libstdc++ probe.cc -o probe-static.exe
-            for EXE in probe-dynamic.exe probe-static.exe; do
-              echo "$EXE imports:"
-              objdump.exe -p "$EXE" | sed -n 's/.*DLL Name: //p' | sort -fu
+            for DLL in libgcc_s_seh-1.dll libstdc++-6.dll libwinpthread-1.dll; do
+              cp -fp "/ucrt64/bin/$DLL" "$RUNTIME/$DLL"
             done
-            test_case() {
-              echo "=== $1 ==="
-              sha256sum libgcc_s_seh-1.dll libstdc++-6.dll libwinpthread-1.dll
-              for EXE in probe-dynamic.exe probe-static.exe; do
-                set +e
-                OUTPUT=$(./"$EXE" 2>&1)
-                STATUS=$?
-                set -e
-                printf '%s status=%s output=<%s>\n' "$EXE" "$STATUS" "$OUTPUT"
-              done
-            }
-            test_case custom-target
-            cp -fp /ucrt64/bin/libwinpthread-1.dll .
-            test_case official-pthread
-            cp -fp /ucrt64/bin/libgcc_s_seh-1.dll .
-            test_case official-gcc-pthread
-            cp -fp /ucrt64/bin/libstdc++-6.dll .
-            test_case official-all-cxx
+            echo 'Effective target runtime hashes after A/B:'
+            sha256sum "$RUNTIME"/*.dll
+            echo 'Run complete installed-toolchain smoke using unmodified test script:'
+            bash -x "$WORKSPACE/mingw64-smoke.sh" "$TC"
           } 2>&1 | tee "$LOG"
           exit ${PIPESTATUS[0]}
       - name: upload diagnostic log
