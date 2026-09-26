@@ -1,0 +1,59 @@
+name: Test UCRT64 host DLL closure repair
+on:
+  push:
+    branches: [ diagnose-ucrt-final-smoke ]
+    paths: [ .github/workflows/test-ucrt-host-closure.yml ]
+permissions:
+  actions: read
+  contents: read
+jobs:
+  verify:
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: MSYS
+          install: mingw-w64-ucrt-x86_64-toolchain bash bzip2 tar
+          update: true
+          release: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: ucrt64-failed-installed-toolchain
+          path: ${{ runner.temp }}/artifact
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: '36224783995'
+      - name: run production host closure and native GCC check
+        shell: msys2 {0}
+        run: |
+          set -euo pipefail
+          ROOT=$(cygpath -u "$RUNNER_TEMP")
+          WORKSPACE=$(cygpath -u "$GITHUB_WORKSPACE")
+          LOG=$ROOT/ucrt64-host-closure.log
+          : > "$LOG"
+          {
+            mkdir -p "$ROOT/installed"
+            tar -xjf "$ROOT/artifact/ucrt64-failed-toolchain.tb2" -C "$ROOT/installed"
+            TC=$ROOT/installed/x86_64-w64-mingw32-msys2
+            TARGET_RUNTIME=$TC/x86_64-w64-mingw32/runtime
+            BEFORE=$(sha256sum "$TARGET_RUNTIME/libgcc_s_seh-1.dll" | cut -d' ' -f1)
+            echo "target runtime libgcc before: $BEFORE"
+            bash "$WORKSPACE/mingw64-runtime-dlls.sh" "$TC" /ucrt64
+            AFTER=$(sha256sum "$TARGET_RUNTIME/libgcc_s_seh-1.dll" | cut -d' ' -f1)
+            echo "target runtime libgcc after: $AFTER"
+            test "$BEFORE" = "$AFTER"
+            sha256sum "$TC/bin/libgcc_s_seh-1.dll" /ucrt64/bin/libgcc_s_seh-1.dll
+            test "$(sha256sum "$TC/bin/libgcc_s_seh-1.dll" | cut -d' ' -f1)" = "$(sha256sum /ucrt64/bin/libgcc_s_seh-1.dll | cut -d' ' -f1)"
+            export PATH="$TC/bin:/usr/bin"
+            test "$(gcc.exe -dumpmachine)" = x86_64-w64-mingw32
+            test "$(g++.exe -dumpmachine)" = x86_64-w64-mingw32
+            echo 'host compiler drivers pass; target runtime not replaced'
+          } 2>&1 | tee "$LOG"
+          exit ${PIPESTATUS[0]}
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ucrt64-host-closure-check-log
+          path: ${{ runner.temp }}/ucrt64-host-closure.log
+          if-no-files-found: warn
