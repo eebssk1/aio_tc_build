@@ -1,0 +1,114 @@
+name: Isolate self-built GCC startup specs
+on:
+  push:
+    branches: [ diagnose-ucrt-final-smoke ]
+    paths: [ .github/workflows/probe-ucrt-self-specs.yml ]
+permissions:
+  actions: read
+  contents: read
+jobs:
+  probe:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: MSYS
+          install: mingw-w64-ucrt-x86_64-toolchain bash bzip2 tar python
+          update: true
+          release: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: ucrt64-failed-installed-toolchain
+          path: ${{ runner.temp }}/artifact
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: '36224783995'
+      - shell: msys2 {0}
+        run: |
+          set -euo pipefail
+          ROOT=$(cygpath -u "$RUNNER_TEMP")
+          LOG="$ROOT/ucrt-self-specs.log"
+          : > "$LOG"
+          {
+            mkdir -p "$ROOT/self-specs-tc" "$ROOT/self-specs-work/source"
+            tar -xjf "$ROOT/artifact/ucrt64-failed-toolchain.tb2" -C "$ROOT/self-specs-tc"
+            TC="$ROOT/self-specs-tc/x86_64-w64-mingw32-msys2"
+            LIB="$TC/x86_64-w64-mingw32/lib"
+            SRC="$ROOT/self-specs-work/source"
+            BASE=https://raw.githubusercontent.com/mingw-w64/mingw-w64/4564ee4b5/mingw-w64-crt
+            curl -fsSL --retry 3 "$BASE/crt/crtdll.c" -o "$SRC/crtdll.c"
+            curl -fsSL --retry 3 "$BASE/include/internal.h" -o "$SRC/internal.h"
+            curl -fsSL --retry 3 "$BASE/include/sect_attribs.h" -o "$SRC/sect_attribs.h"
+            printf '%s  %s\n' \
+              '6ebc176a18c1e448528dddd0604587ba18adc48dd2cc312c5edbc4311c4ff24c' "$SRC/crtdll.c" \
+              '862e7c001b31867db98eefabd82a751f5c3809aee22cca1faee6d6f57cd361b9' "$SRC/internal.h" \
+              '2bb9e4ceee95a88cf6e97301319d5d3b78d57d12c57ec9f830af5d510a82fadc' "$SRC/sect_attribs.h" | sha256sum -c -
+            python3 - "$SRC/crtdll.c" <<'PY'
+          import pathlib,sys
+          p=pathlib.Path(sys.argv[1]);s=p.read_text()
+          for old,new in [
+            ('extern void __cdecl __mingw_dll_do_global_ctors (void);\nextern void __cdecl __mingw_dll_do_global_dtors (void);','extern void __main ();'),
+            ('__mingw_dll_do_global_ctors ();','__main ();'),
+            ('__mingw_dll_do_global_dtors ();','')]:
+            assert s.count(old)==1,old
+            s=s.replace(old,new)
+          p.write_text(s)
+          PY
+            while IFS= read -r DIR; do
+              if [ -f "$DIR/libgcc_s_seh-1.dll" ]; then cp -fp /ucrt64/bin/libgcc_s_seh-1.dll "$DIR/libgcc_s_seh-1.dll"; fi
+            done < <(find "$TC" -type f -iname '*.exe' -printf '%h\n' | sort -u)
+            export PATH="$TC/bin:/usr/bin"
+            unset CC CXX CFLAGS CXXFLAGS CPPFLAGS LDFLAGS CPATH C_INCLUDE_PATH CPLUS_INCLUDE_PATH LIBRARY_PATH GCC_EXEC_PREFIX COMPILER_PATH
+            cd "$ROOT/self-specs-work"
+            cat > shared.c <<'EOF'
+          __declspec(dllexport) int shared_answer(void) { return 42; }
+          EOF
+            cat > loader.c <<'EOF'
+          #define WIN32_LEAN_AND_MEAN
+          #include <windows.h>
+          #include <stdio.h>
+          int main(int argc,char **argv) {
+            HMODULE dll;
+            if (argc!=2) return 2;
+            SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX);
+            dll=LoadLibraryA(argv[1]);
+            if (!dll) {printf("%s LoadLibrary error=%lu\n",argv[1],(unsigned long)GetLastError());return 3;}
+            printf("%s loaded\n",argv[1]);FreeLibrary(dll);return 0;
+          }
+          EOF
+            /ucrt64/bin/gcc.exe loader.c -o loader.exe
+            for KIND in host-O2 self-O0 self-O1 self-O2 self-O2-no-vzero self-O2-no-noreturn self-O2-semantic self-O2-no-align self-O2-no-scheduler self-O2-all-overrides; do
+              echo "=== $KIND ==="
+              CC="$TC/bin/gcc.exe"
+              OPT=(-O2)
+              case "$KIND" in
+                host-O2) CC=/ucrt64/bin/gcc.exe;;
+                self-O0) OPT=(-O0);;
+                self-O1) OPT=(-O1);;
+                self-O2-no-vzero) OPT+=(-mno-vzeroupper);;
+                self-O2-no-noreturn) OPT+=(-mno-noreturn-no-callee-saved-registers);;
+                self-O2-semantic) OPT+=(-fsemantic-interposition);;
+                self-O2-no-align) OPT+=(-malign-data=abi);;
+                self-O2-no-scheduler) OPT+=(-fno-sched-stalled-insns -fno-ira-region);;
+                self-O2-all-overrides) OPT+=(-mno-vzeroupper -mno-noreturn-no-callee-saved-registers -fsemantic-interposition -mno-inline-stringops-dynamically -fno-tree-vectorize -fno-sched-stalled-insns -fno-ira-region -fno-permissive -mno-relax-cmpxchg-loop -malign-data=abi);;
+              esac
+              "$CC" -v -c "$SRC/crtdll.c" -I"$SRC" -I"$TC/x86_64-w64-mingw32/include" -D_SYSCRT=1 "${OPT[@]}" -o "$KIND.o" > "$KIND.compile.log" 2>&1 || { cat "$KIND.compile.log"; exit 1; }
+              grep 'COLLECT_GCC_OPTIONS=' "$KIND.compile.log" | head -1 || :
+              cp -fp "$KIND.o" "$LIB/dllcrt2.o"
+              sha256sum "$LIB/dllcrt2.o"
+              set +e
+              gcc.exe -fno-use-linker-plugin -shared shared.c -o "$KIND.dll" > "$KIND.link.log" 2>&1
+              LINK_STATUS=$?
+              if [ "$LINK_STATUS" -eq 0 ]; then ./loader.exe "$KIND.dll"; LOAD_STATUS=$?; else cat "$KIND.link.log"; LOAD_STATUS=not-linked; fi
+              set -e
+              printf '%s link=%s load=%s\n' "$KIND" "$LINK_STATUS" "$LOAD_STATUS"
+            done
+          } 2>&1 | tee "$LOG"
+          exit ${PIPESTATUS[0]}
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ucrt64-self-specs-log
+          path: ${{ runner.temp }}/ucrt-self-specs.log
+          if-no-files-found: warn
+          retention-days: 14
