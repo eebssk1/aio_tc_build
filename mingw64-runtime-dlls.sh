@@ -44,12 +44,14 @@ cp -fp "$SOURCE" "$TARGET_RUNTIME/$DLL"
 echo "preserved target runtime: $TARGET_RUNTIME/$DLL"
 done
 
-# The compiler driver itself imports libwinpthread, so the copy beside gcc.exe
-# must match the UCRT64/MINGW64 host ABI.  The target sysroot may contain a DLL
-# built for a different CRT; do not let that copy shadow the host runtime.
+# GCC's driver imports both libgcc and libwinpthread.  A target-built libgcc
+# copied beside gcc.exe can prevent native compiler tools from starting.
+# Preserve the target runtimes above before installing the host DLLs.
 TARGET_PTHREAD=$TARGET_LIB/libwinpthread-1.dll
 HOST_PTHREAD=$HOST_BIN/libwinpthread-1.dll
+HOST_LIBGCC=$HOST_BIN/libgcc_s_seh-1.dll
 test -f "$HOST_PTHREAD"
+test -f "$HOST_LIBGCC"
 
 echo "host libwinpthread runtime: $HOST_PTHREAD"
 HOST_PTHREAD_HASH=$(sha256sum "$HOST_PTHREAD" | sed 's/[[:space:]].*//')
@@ -66,15 +68,16 @@ fi
 fi
 cp -fp "$HOST_PTHREAD" "$BIN/libwinpthread-1.dll"
 echo "bundled host runtime: libwinpthread-1.dll"
+cp -fp "$HOST_LIBGCC" "$BIN/libgcc_s_seh-1.dll"
+echo "bundled host runtime: libgcc_s_seh-1.dll"
 
 WORK=$(mktemp -d) || exit 1
 trap 'rm -rf "$WORK"' EXIT
 
 # Copy the complete transitive DLL closure used by installed PE executables.
 # Resolve imports from the active UCRT64/MINGW64 host prefix, but never replace
-# runtimes already produced by this toolchain.  Re-scan copied DLLs until no
-# additional dependency is discovered, so package version changes do not make
-# a hand-maintained DLL list stale.
+# other runtimes already produced by this toolchain.  Re-scan copied DLLs until
+# no additional dependency is discovered.
 while :
 do
 : > "$WORK/imports"
@@ -98,14 +101,16 @@ done < "$WORK/imports.sorted"
 test "$COPIED" = 0 && break
 done
 
-# GCC runs programs from target/bin and libexec directories, not only from the
-# top-level bin directory.  Windows searches an executable's own directory and
-# System32 before PATH, so a same-named system DLL can shadow the compatible
-# copy in top-level bin.  Populate a recursive closure beside the executables
-# in every packaged program directory to make loader resolution deterministic.
+# Windows searches the executable's directory before PATH.  Repair an
+# existing target-built libgcc in each host executable directory rather than
+# allowing it to shadow the host DLL copied above.
 find "$TOOLCHAIN" -type f -iname '*.exe' -printf '%h\n' | sort -u > "$WORK/exe-dirs"
 while IFS= read -r PE_DIR
 do
+if [ -f "$PE_DIR/libgcc_s_seh-1.dll" ]; then
+cp -fp "$HOST_LIBGCC" "$PE_DIR/libgcc_s_seh-1.dll"
+echo "bundled adjacent host runtime: $PE_DIR/libgcc_s_seh-1.dll"
+fi
 while IFS= read -r DLL
 do
 test -n "$DLL" || continue
