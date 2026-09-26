@@ -1,0 +1,66 @@
+name: Test UCRT DLL startup pair
+on:
+  push:
+    branches: [ diagnose-ucrt-final-smoke ]
+    paths: [ .github/workflows/replay-ucrt-crt-pair.yml ]
+permissions:
+  actions: read
+  contents: read
+jobs:
+  test:
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: MSYS
+          install: mingw-w64-ucrt-x86_64-toolchain bash bzip2 tar
+          update: true
+          release: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: ucrt64-failed-installed-toolchain
+          path: ${{ runner.temp }}/artifact
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: '36224783995'
+      - shell: msys2 {0}
+        run: |
+          set -euo pipefail
+          ROOT=$(cygpath -u "$RUNNER_TEMP")
+          LOG=$ROOT/crt-pair.log
+          : > "$LOG"
+          {
+            mkdir -p "$ROOT/pair"
+            tar -xjf "$ROOT/artifact/ucrt64-failed-toolchain.tb2" -C "$ROOT/pair"
+            TC=$ROOT/pair/x86_64-w64-mingw32-msys2
+            LIB=$TC/x86_64-w64-mingw32/lib
+            for F in dllcrt2.o libmingw32.a; do sha256sum "$LIB/$F" "/ucrt64/lib/$F"; done
+            while IFS= read -r DIR; do
+              test ! -f "$DIR/libgcc_s_seh-1.dll" || cp -fp /ucrt64/bin/libgcc_s_seh-1.dll "$DIR/libgcc_s_seh-1.dll"
+            done < <(find "$TC" -type f -iname '*.exe' -printf '%h\n' | sort -u)
+            cp -fp "$(find /ucrt64/lib/gcc/x86_64-w64-mingw32 -name liblto_plugin.dll -print -quit)" "$(find "$TC/libexec" -name liblto_plugin.dll -print -quit)"
+            export PATH="$TC/bin:/usr/bin"
+            unset CPATH C_INCLUDE_PATH CPLUS_INCLUDE_PATH LIBRARY_PATH GCC_EXEC_PREFIX COMPILER_PATH
+            mkdir -p "$ROOT/probe"
+            cd "$ROOT/probe"
+            printf '__declspec(dllexport) int answer(void) { return 42; }\n' > shared.c
+            printf '#include <stdio.h>\n__declspec(dllimport) int answer(void); int main(void) { if(answer()!=42)return 1; puts("dll-ok"); return 0; }\n' > client.c
+            run_case() {
+              gcc.exe -shared shared.c -Wl,--out-implib,libprobe.dll.a -o probe.dll
+              gcc.exe client.c -L. -lprobe -o client.exe
+              set +e
+              OUTPUT=$(./client.exe 2>&1); STATUS=$?
+              set -e
+              printf '%s status=%s output=<%s>\n' "$1" "$STATUS" "$OUTPUT"
+            }
+            run_case original-pair
+            cp -fp /ucrt64/lib/dllcrt2.o /ucrt64/lib/libmingw32.a "$LIB/"
+            run_case official-pair
+          } 2>&1 | tee "$LOG"
+          exit ${PIPESTATUS[0]}
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ucrt64-crt-pair-log
+          path: ${{ runner.temp }}/crt-pair.log
+          if-no-files-found: warn
