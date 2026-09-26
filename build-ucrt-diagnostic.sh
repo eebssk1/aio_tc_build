@@ -3,6 +3,11 @@
 command -v gcc || exit 255
 gcc -dumpmachine || exit 255
 
+# Pin the Windows-validated CRT release for this isolated rebuild. The main
+# build script independently verifies its SHA-256 before extracting it.
+export MINGW_CRT_RELEASE=12a6086c
+export MINGW_CRT_SHA256=24ceae5277d7f109a31d324334882bbb0fa1109a5277ddbcac783429817a568b
+
 set -o pipefail
 set +e
 ./exec.sh mingw64-msys2 2>&1 | tee ucrt64-full-build.log
