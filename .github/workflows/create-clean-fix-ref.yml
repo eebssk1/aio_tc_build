@@ -1,0 +1,29 @@
+name: Create clean fix ref from pre-diagnostic baseline
+on:
+  push:
+    branches: [ diagnose-ucrt-final-smoke ]
+    paths: [ .github/workflows/create-clean-fix-ref.yml ]
+permissions:
+  contents: write
+jobs:
+  create:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Create clean fix branch only if it does not exist
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          BASE=822de0e7f9ac1707868f6e94874cfcb9c34cfcf1
+          BRANCH=fix/msys-native-toolchains-clean
+          test "$(git rev-parse "$BASE^{commit}")" = "$BASE"
+          test "$(git show -s --format=%s "$BASE")" = 'disable linker plugin in MinGW UTF-8 relocatable link'
+          if git ls-remote --exit-code origin "refs/heads/$BRANCH"; then
+            echo 'Ref already exists; refusing to replace it' >&2
+            exit 1
+          fi
+          git -c http.extraheader="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)" push origin "$BASE:refs/heads/$BRANCH"
+          test "$(git ls-remote origin "refs/heads/$BRANCH" | cut -f1)" = "$BASE"
