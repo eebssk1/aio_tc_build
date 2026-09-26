@@ -1,0 +1,94 @@
+name: Diagnose UCRT64 final smoke
+
+on:
+  push:
+    branches: [ diagnose-ucrt-final-smoke ]
+  workflow_dispatch:
+
+concurrency:
+  group: diagnose-ucrt-final-smoke
+  cancel-in-progress: true
+
+jobs:
+  build-ucrt:
+    runs-on: windows-latest
+    env:
+      NO_TC_DOWN: 1
+    steps:
+      - name: setup msys2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MSYS
+          install: mingw-w64-ucrt-x86_64-toolchain mingw-w64-x86_64-toolchain python git gmp-devel mpfr-devel mpc-devel isl-devel zlib-devel libzstd-devel bison flex diffutils make
+          update: true
+          release: false
+      - run: git config --global core.autocrlf input
+      - name: checkout
+        uses: actions/checkout@v4
+      - name: checkout binutils
+        uses: actions/checkout@v4
+        with:
+          repository: eebssk1/m_binutils
+          path: ./m_binutils
+          fetch-depth: 5
+      - name: checkout gcc
+        uses: actions/checkout@v4
+        with:
+          repository: eebssk1/m_gcc
+          path: ./m_gcc
+          fetch-depth: 5
+      - name: build UCRT64 and preserve final smoke failure
+        shell: msys2 {0}
+        run: |
+          set -o pipefail
+          set +e
+          ./exec.sh mingw64-msys2 2>&1 | tee ucrt64-full-build.log
+          build_status=${PIPESTATUS[0]}
+          set -e
+
+          if [ "$build_status" != 0 ]; then
+            if [ -d x86_64-w64-mingw32-msys2 ]; then
+              tar -I 'bzip2 -1' -cf ucrt64-failed-toolchain.tb2 \
+                x86_64-w64-mingw32-msys2 ucrt64-full-build.log
+            elif [ -d out ]; then
+              tar -I 'bzip2 -1' -cf ucrt64-failed-toolchain.tb2 \
+                out ucrt64-full-build.log
+            fi
+          fi
+
+          exit "$build_status"
+      - name: collect configure logs
+        if: always() && !cancelled()
+        shell: msys2 {0}
+        run: |
+          mapfile -d '' logs < <(find m_*/build -type f -name config.log -print0)
+          if [ "${#logs[@]}" -gt 0 ]; then
+            tar -zcf ucrt64-config-logs.tgz "${logs[@]}"
+          fi
+      - name: upload full diagnostic log
+        if: always() && !cancelled()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ucrt64-final-smoke-logs
+          if-no-files-found: error
+          retention-days: 14
+          path: |
+            ./ucrt64-full-build.log
+            ./ucrt64-config-logs.tgz
+            ./gcc-bootstrap*.log
+      - name: upload failed installed toolchain
+        if: failure() && !cancelled()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ucrt64-failed-installed-toolchain
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
+          path: ./ucrt64-failed-toolchain.tb2
+      - name: upload successful installed toolchain
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: result_mingw64-msys2
+          if-no-files-found: error
+          path: ./*cross_msys2.tb2
