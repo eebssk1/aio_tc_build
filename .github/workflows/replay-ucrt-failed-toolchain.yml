@@ -74,6 +74,7 @@ jobs:
             /usr/bin/timeout --kill-after=5s 20s ldd "$BIN/gcc.exe" || true
             export PATH="$BIN:/usr/bin"
             echo 'packaged driver under isolated PATH:'
+            set +e
             gcc.exe -dumpmachine
             echo "gcc status: $?"
             g++.exe -dumpmachine
