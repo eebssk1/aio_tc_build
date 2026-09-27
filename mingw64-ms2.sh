@@ -95,6 +95,11 @@ ln -s ${TB} ${TB}-${GCV}
 fi
 done
 
+# The target CRT is already installed before GCC bootstrap.  Add the host DLL
+# closure only after the native compiler and its tools have been installed.
+cd "$CUR"
+bash "$CUR/mingw64-runtime-dlls.sh" "$CUR/out" "$MINGW_PREFIX" || exit 255
+
 echo current utc time 4 is $(date -u)
 TME=$(date +%s)
 TMT0=$((($TMM-$TMS)/60))
