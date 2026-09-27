@@ -238,6 +238,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: result_${{ matrix.target }}
+          if-no-files-found: error
           path: |
             ./*native.tb2
             ./*cross*.tb2
@@ -254,6 +255,7 @@ jobs:
             ./conflogs*.tgz
             ./curouts*.tgz
             ./stdout_*.log
+            ./gcc-bootstrap-failure.log
       - name: release
         uses: ncipollo/release-action@v1.16.0
         with:
