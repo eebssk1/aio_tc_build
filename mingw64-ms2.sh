@@ -24,6 +24,15 @@ make -j install-strip MAKEINFO=true
 
 cd $CUR
 
+if [ "x$MS" != "x" ]; then
+SUF="_ms"
+fi
+
+# GCC links the target libgcc DLL during stage 1.  Its target CRT startup
+# objects (including dllcrt2.o) must already be in the target prefix.
+mv mingw-crt/ucrt64${SUF}/bin/*.dll mingw-crt/ucrt64${SUF}/lib*/ || true
+cp -a mingw-crt/ucrt64${SUF}/. out/x86_64-w64-mingw32/ || exit 255
+
 cd m_binutils; mkdir build; cd build
 
 export LDFLAGS="$LDFLAGS -L${PWD}/libiberty"
@@ -42,10 +51,6 @@ cd $CUR
 #tar --bzip -xf gcc-dep.tb2
 #cp -a gcc-dep/lib/*.a out/x86_64-w64-mingw32/lib/
 #cp -a gcc-dep/lib/*.dll out/bin/
-
-if [ "x$MS" != "x" ]; then
-SUF="_ms"
-fi
 
 cd m_gcc; mkdir build; cd build
 
@@ -69,7 +74,7 @@ make -j$(($N+3)) bootstrap STAGE1_CFLAGS="-g1 -Os" MAKEINFO=true && make -j$(($N
 
 if [ "$?" != "0" ]; then
 echo "Error ed !"
-exit 0
+exit 255
 fi
 
 make -j install-strip MAKEINFO=true
@@ -89,9 +94,6 @@ if [ -e ${TB} ] && [ ! -e ${TB}-${GCV} ]; then
 ln -s ${TB} ${TB}-${GCV}
 fi
 done
-
-mv mingw-crt/ucrt64${SUF}/bin/*.dll mingw-crt/ucrt64${SUF}/lib*/ || true
-cp -a mingw-crt/ucrt64${SUF}/. out/x86_64-w64-mingw32/
 
 echo current utc time 4 is $(date -u)
 TME=$(date +%s)
