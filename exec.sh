@@ -38,6 +38,16 @@ if [ -e /usr/lib/x86_64-linux-gnu/libtcmalloc_minimal.so.4 ]; then
 export LD_PRELOAD=libtcmalloc_minimal.so.4
 fi
 
+# GNU stdbuf also uses LD_PRELOAD.  An MSYS launcher converts that value to a
+# Windows path before native xgcc starts GCC's MSYS collect-ld wrapper.  The
+# MSYS runtime parses LD_PRELOAD with ':' separators, so a converted C:/... path
+# prevents /bin/sh from starting.  The allocator preload above is Linux-only too.
+case "$1" in
+mingw64-msys2*)
+unset LD_PRELOAD
+;;
+esac
+
 
 case "$1" in
 mingw*)
