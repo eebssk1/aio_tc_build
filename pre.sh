@@ -70,13 +70,19 @@ mv x86_64-linux-gnu /opt/newcc
 fi
 fi
 
-git clone https://git.code.sf.net/p/mingw-w64/mingw-w64 -b master --depth=5 mingw-w64-mingw-w64 || exit 255
-cd mingw-w64-mingw-w64
-echo "MINGW: $(git log --no-merges --no-decorate -1 --oneline)" >> ../note.txt
-cd ..
-
-if [ "$MG" != "1" ]; then
-rm -rf mingw-w64-mingw-w64
+# Only MinGW targets need these headers/tools.  In particular, a transient
+# SourceForge failure must not stop unrelated Linux and ARM builds.
+if [ "$MG" = "1" ]; then
+    MINGW_SOURCE=https://git.code.sf.net/p/mingw-w64/mingw-w64
+    MINGW_MIRROR=https://github.com/mingw-w64/mingw-w64.git
+    if ! git clone -b master --depth=5 "$MINGW_SOURCE" mingw-w64-mingw-w64; then
+        rm -rf mingw-w64-mingw-w64
+        if ! git clone -b master --depth=5 "$MINGW_SOURCE" mingw-w64-mingw-w64; then
+            rm -rf mingw-w64-mingw-w64
+            git clone -b master --depth=5 "$MINGW_MIRROR" mingw-w64-mingw-w64 || exit 255
+        fi
+    fi
+    (cd mingw-w64-mingw-w64 && echo "MINGW: $(git log --no-merges --no-decorate -1 --oneline)") >> note.txt || exit 255
 fi
 
 rm -rf m_*/build
