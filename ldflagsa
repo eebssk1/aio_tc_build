@@ -1,1 +1,1 @@
--Wl,--relax
+-Wl,--relax,-O3
