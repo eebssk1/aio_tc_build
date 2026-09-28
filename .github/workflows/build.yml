@@ -100,6 +100,9 @@ jobs:
             ./conflogs*.tgz
             ./curouts*.tgz
             ./stdout_*.log
+      - name: random delay
+        shell: bash
+        run: sleep $(( 5 + RANDOM % 11 ))
       - name: release
         uses: ncipollo/release-action@v1.16.0
         with:
@@ -179,6 +182,9 @@ jobs:
             ./conflogs*.tgz
             ./curouts*.tgz
             ./stdout_*.log
+      - name: random delay
+        shell: bash
+        run: sleep $(( 5 + RANDOM % 11 ))
       - name: release
         uses: ncipollo/release-action@v1.16.0
         with:
@@ -255,6 +261,9 @@ jobs:
             ./conflogs*.tgz
             ./curouts*.tgz
             ./stdout_*.log
+      - name: random delay
+        shell: bash
+        run: sleep $(( 5 + RANDOM % 11 ))
       - name: release
         uses: ncipollo/release-action@v1.16.0
         with:
