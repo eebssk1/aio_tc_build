@@ -70,7 +70,7 @@ mv x86_64-linux-gnu /opt/newcc
 fi
 fi
 
-git clone https://git.code.sf.net/p/mingw-w64/mingw-w64 -b master --depth=5 mingw-w64-mingw-w64 || exit 255
+git clone https://git.code.sf.net/p/mingw-w64/mingw-w64 -b master --depth=3 mingw-w64-mingw-w64 || exit 255
 cd mingw-w64-mingw-w64
 echo "MINGW: $(git log --no-merges --no-decorate -1 --oneline)" >> ../note.txt
 cd ..
