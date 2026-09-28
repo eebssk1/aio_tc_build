@@ -1,6 +1,6 @@
 #!/bin/sh
 
-if [ "$1" != "mingw64-msys2" ]; then
+if [ "$1" != "mingw64-msys2" ] && [ "$1" != "mingw64-msys2-ms" ]; then
 if [ x$IN0 = x ]; then
 export IN0=1
 exec stdbuf -oL $0 "$@"
