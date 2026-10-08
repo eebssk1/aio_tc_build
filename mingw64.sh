@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 CUR=$PWD
 
@@ -129,7 +129,7 @@ cp -dr $CUR/mingw-32-wrapper/* ./
 for a in cpp g++ gcc gcc-ar gcc-nm gcc-ranlib gcov
 do
 TB=i686-w64-mingw32-$a
-if [ -e ${TB} ] && [ ! -e ${TB}-${GCV}; then
+if [ -e ${TB} ] && [ ! -e ${TB}-${GCV} ]; then
 ln -s ${TB} ${TB}-${GCV}
 fi
 done
