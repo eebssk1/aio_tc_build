@@ -63,7 +63,7 @@ fi
 
 if [ x$NO_LTO = x ]; then
 LTO="--with-build-config=bootstrap-lto$DED"
-export LDFLAGS="$CLFAGS $LDFLAGS"
+export LDFLAGS="$CFLAGS $LDFLAGS"
 fi
 
 ../configure --host=x86_64-linux-gnu --build=x86_64-linux-gnu --target=x86_64-linux-gnu --prefix=/usr --enable-version-specific-runtime-libs --enable-lto --disable-cet --enable-multiarch --with-arch-32=westmere --enable-multilib --with-multilib-list=m32,m64,mx32 --with-abi=m64 --disable-fixincludes --enable-libstdcxx-time --disable-libstdcxx-debug --disable-libstdcxx-pch --enable-graphite --enable-threads --enable-languages=c,c++,lto --with-linker-hash-style=gnu --enable-gnu-indirect-function --enable-gnu-unique-object --enable-plugin --enable-default-pie --with-gcc-major-version-only --enable-linker-build-id --with-default-libstdcxx-abi=new --enable-fully-dynamic-string --with-arch=broadwell --with-tune=broadwell --enable-checking=release --without-included-gettext --enable-clocale=gnu $LTO --with-system-zlib --enable-shared=libgcc,libstdc++,libitm,libssp,libsanitizer --with-specs-file="$CUR/native.specs" || exit 255
