@@ -97,6 +97,22 @@ export MS=1
 export LEXLIB=-Wl,--push-state,-Bstatic,-lfl,--pop-state
 exec $CUR/mingw64.sh
 ;;
+mingw64-broadwell-cross)
+export LEXLIB=-Wl,--push-state,-Bstatic,-lfl,--pop-state
+exec $CUR/mingw64-broadwell.sh
+;;
+mingw64-broadwell-cross-ms)
+export MS=1
+export LEXLIB=-Wl,--push-state,-Bstatic,-lfl,--pop-state
+exec $CUR/mingw64-broadwell.sh
+;;
+mingw64-win-broadwell)
+exec $CUR/mingw64-n-broadwell.sh
+;;
+mingw64-win-broadwell-ms)
+export MS=1
+exec $CUR/mingw64-n-broadwell.sh
+;;
 mingw64-legacy-cross)
 export LEXLIB=-Wl,--push-state,-Bstatic,-lfl,--pop-state
 exec $CUR/mingw64.sh legacy

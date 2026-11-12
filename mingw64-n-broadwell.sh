@@ -1,0 +1,119 @@
+#!/bin/sh
+
+CUR=$PWD
+
+if [ -e /opt/newcc/bin ]; then
+export PATH=/opt/newcc/bin:$PATH
+export LD_LIBRARY_PATH=/opt/newcc/lib
+fi
+
+SUF=
+if [ "x$MS" != "x" ]; then
+SUF="_ms"
+fi
+
+# Keep the bootstrap CRT and GCC runtimes on the same Broadwell/MS variant.
+wget https://github.com/eebssk1/aio_tc_build/releases/latest/download/x86_64-w64-mingw32-cross-broadwell$SUF.tb2 || exit 255
+tar --bzip -xf x86_64-w64-mingw32-cross-broadwell$SUF.tb2 || exit 255
+mv x86_64-w64-mingw32$SUF x86_64-w64-mingw32-boot || exit 255
+rm x86_64-w64-mingw32-cross-broadwell$SUF.tb2
+
+export PATH=$CUR/x86_64-w64-mingw32-boot/bin:$PATH
+
+tar --bzip -xf gcc-dep.tb2
+rm gcc-dep.tb2
+
+export CFLAGS="-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=1 -Wa,-O2 -D__BUILD_NO_CON__ -march=broadwell -mtune=icelake-client @$CUR/gccflags"
+export CXXFLAGS="$CFLAGS"
+export LDFLAGS="-L$CUR/gcc-dep/lib @$CUR/ldflagsm"
+export CPPFLAGS="-I$CUR/gcc-dep/include"
+
+curl -L "https://github.com/eebssk1/mingw-crt-build/releases/latest/download/mingw-crt.tgz" | tar -zxf - || exit 255
+
+echo current utc time 1 is $(date -u)
+TMS=$(date +%s)
+
+cp -rf mingw-crt/ucrt64-broadwell$SUF/lib/* $CUR/x86_64-w64-mingw32-boot/x86_64-w64-mingw32/lib/ || exit 255
+cp -rf mingw-crt/msvcrt32$SUF/lib/* $CUR/x86_64-w64-mingw32-boot/x86_64-w64-mingw32/lib/32/ || exit 255
+
+mkdir -p out/x86_64-w64-mingw32
+cp -a mingw-crt/ucrt64-broadwell$SUF/. out/x86_64-w64-mingw32/ || exit 255
+mkdir -p out/x86_64-w64-mingw32/lib/32/bin
+cp -a mingw-crt/msvcrt32$SUF/lib/.  out/x86_64-w64-mingw32/lib/32
+cp -a mingw-crt/msvcrt32$SUF/bin/.  out/x86_64-w64-mingw32/lib/32/bin
+cp -a $CUR/gcc-dep/lib/*.a out/x86_64-w64-mingw32/lib
+mkdir out/bin
+cp -a $CUR/gcc-dep/lib/*.dll out/bin
+
+ln -s ./include out/x86_64-w64-mingw32/sys-include
+
+
+cd mingw-w64-mingw-w64; mkdir build; cd build
+
+../configure --host=x86_64-w64-mingw32 --target=x86_64-w64-mingw32  --without-headers --without-crt --with-tools=all --prefix=$CUR/out || exit 255
+make -j$(($N+3)) all MAKEINFO=true || exit 255
+make -j install-strip MAKEINFO=true
+
+cd $CUR
+
+cd m_binutils; mkdir build; cd build
+
+export LDFLAGS="$LDFLAGS -L${PWD}/libiberty"
+
+../configure --prefix=$CUR/out --host=x86_64-w64-mingw32 --target=x86_64-w64-mingw32 --program-prefix=x86_64-w64-mingw32- --with-sysroot=$CUR/out/x86_64-w64-mingw32 --disable-shared --enable-multilib --enable-64-bit-bfd --enable-nls --disable-rpath --enable-install-libiberty --enable-plugins --enable-deterministic-archives --with-system-zlib --with-zstd --disable-werror --enable-lto --disable-gdb --disable-gdbserver --disable-gprof --disable-gprofng || exit 255
+make -j$(($N+2)) all MAKEINFO=true || exit 255
+
+make -j install-strip MAKEINFO=true
+TMM=$(date +%s)
+
+echo current utc time 2 is $(date -u)
+
+cd $CUR
+
+cd m_gcc; mkdir build; cd build
+
+export lt_cv_deplibs_check_method='pass_all'
+export gcc_cv_have_tls=yes
+export glibcxx_cv_atomic_word=yes
+export CPPFLAGS_FOR_TARGET="-DWIN32_LEAN_AND_MEAN -DCOM_NO_WINDOWS_H @$CUR/gccflags"
+export LDFLAGS_FOR_TARGET="@$CUR/ldflagsm"
+export CFLAGS_FOR_TARGET="-ffunction-sections -fdata-sections -Wa,-O2 -D__BUILD_NO_CON__"
+export CXXFLAGS_FOR_TARGET="$CFLAGS_FOR_TARGET"
+
+echo current utc time 3 is $(date -u)
+
+../configure --prefix=$CUR/out --host=x86_64-w64-mingw32 --target=x86_64-w64-mingw32 --program-prefix=x86_64-w64-mingw32- --enable-version-specific-runtime-libs --enable-checking=release --with-local-prefix=$CUR/out/x86_64-w64-mingw32/local  --with-arch=broadwell --with-tune=icelake-client --enable-mingw-wildcard --with-gcc-major-version-only --disable-cet --disable-vtable-verify --enable-plugin  --enable-libatomic --enable-threads=posix --enable-graphite --enable-fully-dynamic-string --enable-tls --with-libstdcxx-zoneinfo="yes" --enable-libstdcxx-backtrace=yes --enable-libstdcxx-filesystem-ts --enable-libstdcxx-time --disable-libstdcxx-pch --enable-lto --enable-libgomp --disable-libssp --disable-libvtv --enable-shared=libgcc,libstdc++,libgomp,libatomic --enable-multiarch --enable-multilib --with-arch-32=haswell --with-multilib-list=m32,m64 --with-abi=m64 --disable-rpath --enable-nls --disable-werror --disable-symvers --disable-libstdcxx-debug --disable-win32-registry --enable-languages=c,c++,lto --disable-sjlj-exceptions --with-specs-file="$CUR/mingw64.specs" || exit 255
+make -j$(($N+2)) all MAKEINFO=true || exit 255
+
+make -j install-strip MAKEINFO=true
+
+GCV=$(cat ../gcc/BASE-VER | cut -d'.' -f 1)
+
+cd $CUR/out/bin
+
+for a in cpp g++ gcc gcc-ar gcc-nm gcc-ranlib gcov
+do
+TA=${a}-${GCV}
+TB=x86_64-w64-mingw32-${a}
+if [ -e $a ] && [ ! -e ${TA} ]; then
+ln -s ${a} ${TA}
+fi
+if [ -e ${TB} ] && [ ! -e ${TB}-${GCV} ]; then
+ln -s ${TB} ${TB}-${GCV}
+fi
+done
+
+echo current utc time 4 is $(date -u)
+TME=$(date +%s)
+TMT0=$((($TMM-$TMS)/60))
+TMT1=$((($TME-$TMM)/60))
+TMA=$(($TMT0+$TMT1))
+echo "part 1 took $TMT0 min, part 2 took $TMT1 min, which sum to $TMA min together!"
+
+cd $CUR
+
+rm out/x86_64-w64-mingw32/sys-include
+
+mv out x86_64-w64-mingw32-broadwell-indep$SUF
+tar -hI 'bzip2 -9' -cf x86_64-w64-mingw32-cross-broadwell_indep$SUF.tb2 x86_64-w64-mingw32-broadwell-indep$SUF
+exit 0
